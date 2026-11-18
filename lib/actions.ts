@@ -4,7 +4,7 @@ import {
   addressSchema,
   asTile,
   cartLineSchema,
-  paymentSessionSchema,
+  standardSessionSchema,
   quoteSchema,
   slugSchema,
   trackingSchema,
@@ -14,13 +14,13 @@ import {
   type ShopProduct,
   type Tracking,
 } from './contracts';
-import { getCatalogue, getSettings, request } from './gateway';
+import { getSelection, getSettings, request } from './gateway';
 import { formatMobile, maskReference, validMobile } from './shop';
 const invalid = { ok: false, kind: 'invalid', message: 'Please check the details you entered.' } as const;
 export async function lookupProducts(slugs: string[]): Promise<Result<ShopProduct[]>> {
   const input = z.array(slugSchema).max(220).safeParse(slugs);
   if (!input.success) return invalid;
-  const { products, unavailable } = await getCatalogue();
+  const { products, unavailable } = await getSelection('selection', ...input.data);
   return unavailable
     ? { ok: false, kind: 'unavailable', message: 'We couldn’t check the collection. Please try again.' }
     : { ok: true, value: products.filter((p) => input.data.includes(p.slug)).map(asTile) };
@@ -39,7 +39,14 @@ export async function trackOrders(number: string): Promise<Result<Tracking>> {
     ? { ok: true, value: r.value.orders.map((o) => ({ ...o, reference: maskReference(o.reference) })) }
     : r;
 }
-export async function getQuote(cart: CartLine[], address: Address, consent: boolean, email?: string) {
+export async function getQuote(
+  cart: CartLine[],
+  address: Address,
+  consent: boolean,
+  email?: string,
+  coupon?: string,
+  key?: string,
+) {
   const a = addressSchema.safeParse(address);
   const lines = z.array(cartLineSchema).min(1).max(99).safeParse(cart);
   if (
@@ -59,6 +66,8 @@ export async function getQuote(cart: CartLine[], address: Address, consent: bool
     lines: lines.data,
     address: a.data,
     ...(email ? { email } : {}),
+    ...(coupon ? { coupon } : {}),
+    ...(key ? { key } : {}),
     termsAccepted: true,
   });
 }
@@ -66,7 +75,7 @@ export async function startPayment(quoteId: string) {
   if (typeof quoteId !== 'string' || !quoteId || quoteId.length > 200) return invalid;
   if (!(await getSettings()).checkoutEnabled)
     return { ok: false, kind: 'unavailable', message: 'Payments are not available.' } as const;
-  const result = await request('checkout/session', paymentSessionSchema, { quoteId });
+  const result = await request('checkout/session', standardSessionSchema, { quoteId });
   return result.ok && result.value.quoteId !== quoteId ? invalid : result;
 }
 export async function subscribeEmail(email: string, consent: boolean) {

@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { pageMeta } from '@/lib/seo';
 import Link from 'next/link';
 import { ArrowUpRight, Feather, Heart, Layers, LockKeyhole, Mail } from 'lucide-react';
 import { Campaign } from '@/components/campaign';
@@ -6,9 +7,20 @@ import { ArrowLink, Bloom, Eyebrow } from '@/components/ui';
 import { ProductCard } from '@/components/product-card';
 import { MessageForm } from '@/components/forms';
 import { categories, categoryHref, editionLinks } from '@/lib/content';
-import { getCatalogue, getSettings } from '@/lib/gateway';
+import { getSelection, getSettings } from '@/lib/gateway';
 import type { Product } from '@/lib/contracts';
 export const revalidate = 60;
+export async function generateMetadata() {
+  const s = await getSettings();
+  return s.seoTitle || s.seoDescription
+    ? pageMeta(
+        s.seoTitle || 'Contemporary Indian Kurtis for Women',
+        s.seoDescription || 'Discover the PARADELLE Kurti collection.',
+        '/',
+      )
+    : {};
+}
+
 function MerchShelf({
   title,
   kicker,
@@ -51,7 +63,7 @@ function MerchShelf({
   );
 }
 export default async function Home() {
-  const [{ products, unavailable }, settings] = await Promise.all([getCatalogue(), getSettings()]);
+  const [{ products, unavailable }, settings] = await Promise.all([getSelection('home'), getSettings()]);
   const reviews = products.flatMap((p) => p.reviews.map((r) => ({ ...r, product: p }))).slice(0, 3);
   return (
     <>

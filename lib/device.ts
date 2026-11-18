@@ -1,4 +1,5 @@
 'use client';
+import { measure } from './measurement';
 import { useSyncExternalStore } from 'react';
 import type { Address, CartLine } from './contracts';
 import { isSort, type Sort } from './content';
@@ -157,6 +158,11 @@ export function markViewed(slug: string) {
 }
 export function changeQuantity(line: CartLine, quantity: number) {
   const s = read();
+  const previous = s.cart.find((x) => x.variantId === line.variantId && x.slug === line.slug)?.quantity ?? 0;
+  if (previous !== quantity)
+    measure(quantity < previous ? 'remove_from_cart' : 'add_to_cart', [
+      { item_id: line.variantId, quantity: Math.abs(quantity - previous) },
+    ]);
   write({
     ...s,
     cart: s.cart.flatMap((l) =>
@@ -178,7 +184,10 @@ export function addToBag(slug: string, variantId: string, stock: number) {
     return false;
   }
   if (line) changeQuantity(line, qty);
-  else write({ ...s, cart: [...s.cart, { slug, variantId, quantity: qty }], pending: null });
+  else {
+    write({ ...s, cart: [...s.cart, { slug, variantId, quantity: qty }], pending: null });
+    measure('add_to_cart', [{ item_id: variantId, quantity: qty }]);
+  }
   toast(`Added to your bag.${storageNote()}`);
   return true;
 }

@@ -1,5 +1,11 @@
 import 'server-only';
 import { cache } from 'react';
+import { configuredDB } from './server/base';
+import { browse } from './server/browse';
+import { discover, getFacets, parseQuery, type Params } from './shop';
+import { tx } from './server/base';
+import { selectedCatalogue, publicList, publicSettings } from './server/catalogue';
+import { guestCall } from './server/guest';
 import type { z } from 'zod';
 import { catalogueSchema, settingsSchema, receiptSchema, type Result } from './contracts';
 const origin = process.env.STOREFRONT_API_URL?.replace(/\/$/, '');
@@ -10,6 +16,7 @@ const unavailable = {
 } as const;
 /** Paths are fixed by server modules. No user-supplied URLs, credentials or payment results are trusted. */
 export async function request<T>(path: string, schema: z.ZodType<T>, body?: unknown): Promise<Result<T>> {
+  if (configuredDB() && body !== undefined) return guestCall(path, schema, body);
   if (!origin) return unavailable;
   try {
     const response = await fetch(`${origin}/${path}`, {
@@ -59,14 +66,60 @@ export const getCatalogue = cache(async () => {
   };
 });
 export const getSettings = cache(async () => {
+  if (configuredDB()) {
+    try {
+      return await publicSettings();
+    } catch {
+      return settingsSchema.parse({});
+    }
+  }
   if (origin) {
     const r = await request('settings', settingsSchema);
     if (r.ok) return r.value;
   }
   return settingsSchema.parse({});
 });
-export async function verifyReceipt(receipt: string) {
-  if (!/^[A-Za-z0-9_-]{24,192}$/.test(receipt)) return null;
+export async function verifyReceipt(receipt?: string) {
+  if (configuredDB()) {
+    const r = await guestCall('payments/receipt', receiptSchema, { receipt });
+    return r.ok ? r.value : null;
+  }
+  if (!receipt || !/^[A-Za-z0-9_-]{24,192}$/.test(receipt)) return null;
   const r = await request('payments/receipt', receiptSchema, { receipt });
   return r.ok ? r.value : null;
+}
+
+export const getSelection = cache(
+  async (kind: 'home' | 'related' | 'selection' | 'detail', ...keys: string[]) => {
+    if (!configuredDB()) return getCatalogue();
+    try {
+      return {
+        products:
+          kind === 'detail'
+            ? (await publicList('', '', 1, 1, keys[0])).products
+            : await selectedCatalogue(kind, keys),
+        unavailable: false,
+      };
+    } catch {
+      return { products: [], unavailable: true };
+    }
+  },
+);
+export const getListing = cache(async (raw: Params) => {
+  const q = parseQuery(raw);
+  if (configuredDB()) {
+    try {
+      return await browse(q);
+    } catch {
+      return { ...discover([], q), options: getFacets([]), unavailable: true };
+    }
+  }
+  const { products, unavailable } = await getCatalogue();
+  return { ...discover(products, q), options: getFacets(products), unavailable };
+});
+export async function sitemapRecords() {
+  if (configuredDB())
+    return tx((s) => s`select slug,category from products where status='published' order by slug`);
+  const { products } = await getCatalogue();
+  return products.map((p) => ({ slug: p.slug, category: p.categories[0] }));
 }

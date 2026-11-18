@@ -15,11 +15,12 @@ import {
   StateBox,
   useCommand,
 } from './workbench';
-import { MediaEditor, Pricing } from './product-fields';
+import { MediaEditor, Pricing, MoneyField } from './product-fields';
 const labels = {
   identity: 'Store identity',
   contact: 'Contact details',
   pricing: 'Pricing defaults',
+  delivery: 'Delivery coverage',
   social: 'Social links',
   policies: 'Store policies',
   seo: 'SEO defaults',
@@ -75,7 +76,12 @@ export function Preferences({ data }: { data: Read<{ value: AdminSettings; revis
       ask(false);
       return;
     }
-    const c = { op: 'settings.save' as const, revision: data.value.revision, section: tab, value: s[tab] };
+    const c = {
+      op: 'settings.save' as const,
+      revision: data.value.revision,
+      section: tab,
+      value: tab === 'delivery' ? { ...s.delivery, pins: s.delivery.pins.filter(Boolean) } : s[tab],
+    };
     const issues = checkCommand(c);
     if (issues.length) {
       error(issues[0]);
@@ -141,6 +147,36 @@ export function Preferences({ data }: { data: Read<{ value: AdminSettings; revis
               ['registration', 'Registration details'],
               ['address', 'Business address', 'textarea'],
             ])
+          ) : tab === 'delivery' ? (
+            <div className="ad-formgrid">
+              <MoneyField
+                label="Flat delivery charge including tax (₹)"
+                value={s.delivery.shipping}
+                onChange={(shipping) => patch('delivery', { shipping })}
+              />
+              <MoneyField
+                label="Free delivery from (₹, optional)"
+                value={s.delivery.freeFrom}
+                onChange={(freeFrom) => patch('delivery', { freeFrom })}
+              />
+              <Field
+                label="GST included in delivery charge (%)"
+                type="number"
+                min={0}
+                max={100}
+                step="0.01"
+                value={s.delivery.gst / 100}
+                onChange={(str) => patch('delivery', { gst: Math.round(Number(str) * 100) })}
+              />
+              <Field
+                wide
+                label="Serviceable Indian PIN codes"
+                hint="Enter one confirmed PIN per line. Empty coverage disables checkout."
+                type="textarea"
+                value={s.delivery.pins.join('\n')}
+                onChange={(value) => patch('delivery', { pins: value.split(/[\s,]/) })}
+              />
+            </div>
           ) : tab === 'pricing' ? (
             <Pricing defaults value={s.pricing} set={(pricing) => set({ ...s, pricing })} />
           ) : tab === 'social' ? (
@@ -160,10 +196,11 @@ export function Preferences({ data }: { data: Read<{ value: AdminSettings; revis
                 Profile changes apply only to the signed-in administrator. Email changes require provider
                 verification.
               </InfoBox>
-              {section('Admin profile', 'profile', [
-                ['name', 'Display name'],
-                ['email', 'Admin email', 'email'],
-              ])}
+              {section('Admin profile', 'profile', [['name', 'Display name']])}
+              <p className="ad-muted">
+                Verified sign-in email: {s.profile.email || 'Not available'}. Manage identity changes through
+                authorised Supabase administration.
+              </p>
             </>
           ) : (
             <>
@@ -232,7 +269,8 @@ export function Preferences({ data }: { data: Read<{ value: AdminSettings; revis
                   op: 'settings.save',
                   revision: data.state === 'ready' ? data.value.revision : 0,
                   section: tab,
-                  value: s[tab],
+                  value:
+                    tab === 'delivery' ? { ...s.delivery, pins: s.delivery.pins.filter(Boolean) } : s[tab],
                 });
                 if (issues.length) {
                   error(issues.join(' '));

@@ -1369,6 +1369,18 @@
               }
             ]
           },
+          "discountAllowance": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "feeRate": {
             "anyOf": [
               {
@@ -1488,6 +1500,22 @@
           },
           "enabled": {
             "type": "boolean"
+          },
+          "colour": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "priceOverride": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -1639,6 +1667,43 @@
             "items": {
               "$ref": "#/components/schemas/Photo"
             }
+          },
+          "sourceUrl": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "sourcePrice": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "compareAt": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mrpVerified": {
+            "type": "boolean"
+          },
+          "featured": {
+            "type": "boolean"
+          },
+          "bestseller": {
+            "type": "boolean"
           },
           "factsVerified": {
             "type": "boolean"
@@ -1832,6 +1897,17 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 9007199254740991
+          },
+          "sourceUrl": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 240
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -2047,6 +2123,54 @@
           },
           "manual": {
             "$ref": "#/components/schemas/ManualFulfilment"
+          },
+          "exception": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 240
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "refunds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "$ref": "#/components/schemas/Key"
+                },
+                "amount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "requested",
+                    "pending",
+                    "processed",
+                    "failed"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                }
+              },
+              "required": [
+                "id",
+                "amount",
+                "status",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            }
           },
           "history": {
             "type": "array",
@@ -3138,6 +3262,55 @@
           "pricing": {
             "$ref": "#/components/schemas/Costs"
           },
+          "delivery": {
+            "type": "object",
+            "properties": {
+              "shipping": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "freeFrom": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "gst": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000
+              },
+              "pins": {
+                "maxItems": 10000,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[1-9]\\d{5}$"
+                }
+              }
+            },
+            "required": [
+              "shipping",
+              "freeFrom",
+              "gst",
+              "pins"
+            ],
+            "additionalProperties": false
+          },
           "social": {
             "type": "object",
             "properties": {
@@ -3240,6 +3413,7 @@
           "identity",
           "contact",
           "pricing",
+          "delivery",
           "social",
           "policies",
           "seo",
@@ -3575,6 +3749,7 @@
                   "identity",
                   "contact",
                   "pricing",
+                  "delivery",
                   "social",
                   "policies",
                   "seo",
@@ -3683,6 +3858,36 @@
               "op",
               "ref",
               "draft"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "import.references"
+              },
+              "ref": {
+                "$ref": "#/components/schemas/Reference"
+              },
+              "referenceIds": {
+                "maxItems": 4,
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Key"
+                }
+              },
+              "rightsConfirmed": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "required": [
+              "op",
+              "ref",
+              "referenceIds",
+              "rightsConfirmed"
             ],
             "additionalProperties": false
           },
@@ -3866,6 +4071,9 @@
             "maximum": 9007199254740991
           },
           "eventId": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "productId": {
             "$ref": "#/components/schemas/Key"
           },
           "outcome": {

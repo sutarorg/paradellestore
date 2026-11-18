@@ -57,7 +57,7 @@ export async function signIn(email: string, password: string): Promise<Result<nu
       httpOnly: true,
       secure: true,
       sameSite: 'strict',
-      path: '/admin',
+      path: process.env.DATABASE_URL ? '/' : '/admin',
       maxAge: data.expiresIn,
     });
     return { ok: true, value: null };
@@ -85,7 +85,7 @@ export async function logout() {
     httpOnly: true,
     secure: true,
     sameSite: 'strict',
-    path: '/admin',
+    path: process.env.DATABASE_URL ? '/' : '/admin',
     maxAge: 0,
   });
 }
@@ -144,7 +144,13 @@ export async function mutate(raw: unknown, attempt: string): Promise<Result<Rece
         v.op === 'settings.save' ? { ...v, value: settings.shape[v.section].parse(v.value) } : v,
       ),
     });
-    if (!r.ok) return failed(statusMessage(r.status));
+    if (!r.ok) {
+      if (process.env.DATABASE_URL) {
+        const data = await r.json().catch(() => null);
+        if (typeof data?.error?.message === 'string') return failed(data.error.message);
+      }
+      return failed(statusMessage(r.status));
+    }
     const accepted = receipt.parse(await r.json());
     if (
       queued(v)

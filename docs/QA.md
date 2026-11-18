@@ -1,60 +1,25 @@
-# Stage 1 verification · 18 November 2026
+# Verification · 18 November 2026
 
-Tested the production Next.js build, without a catalogue API or payment provider configured. The production preview is the customer storefront, not a test harness. The original repository reference is unchanged.
+## Stage 3 · isolated service (embedded-postgres 18, Node 22, local Next/Chromium optional)
 
-[Illustrated handoff (PDF)](PARADELLE-Stage-1.pdf) · [Machine-readable browser results](qa-summary.json)
+| Check | Result | Evidence |
+|---|---|---|
+| Biome lint (120 files) | Passed | `/tmp/paradelle-stage3-fix5` → current `Checked 120 files… No fixes` |
+| Next `typegen && tsc --noEmit` | Passed | typecheck logs `Types generated successfully` |
+| Domain + admin + store unit | 34 passed | `npm test` |
+| `next build` | Passed (static/dynamic) | local build logs |
+| `npm audit` | 0 vulnerabilities (locked) | `audit` logs |
+| Isolated PostgreSQL 14 checks (transactions, RLS, stock, coupons, checkout, webhook, tracking, PII, fulfilment, importer, views, reconciliation) | **14 passed** | `npm run test:commerce` → `1..14 pass` (`/tmp/paradelle-stage3-commerce9` etc) |
+| Optional browser E2E (mobile bag→Standard Checkout fixture→verified receipt→masked tracking; staff detail/revocation; image decode; consent/GA4/Meta dedup) | 14 passed | `npm run test:commerce:browser` (`/tmp/paradelle-stage3-e2e2` 14 pass) |
+| Browser matrix (storefront) / Admin matrix | 0 errors/violations, expected 404s, decoded images, axe scans | `test:browser` / `test:admin` logs |
+| Boundary / Admin records | 10/10 + records pass (private POST, no PII leakage, 409, revocation) | `test:boundary`, `test:admin:records` |
 
-## Results
+**Not hosted verification:** no cloud Supabase Auth/Storage migration acceptance, no Razorpay live/test transaction, no fal generation, no DNS/TLS, no production traffic. Isolated concurrency/replay tests do not equal provider transactions. Preview origin `https://3000-…e2b.app` only.
 
-| Check | Result |
-|---|---|
-| Biome lint, warnings treated as errors | Passed |
-| Next route type generation and `tsc --noEmit` | Passed |
-| Node domain, storage and contract tests | **17 passed** |
-| `next build` | Passed; static, revalidated and dynamic routes generated |
-| `npm audit` | No reported vulnerabilities in the locked dependencies at test time |
-| Browser route matrix | **45 checks:** 15 paths × 3 viewport classes, including genuine HTTP 404s for a missing product and an unknown page |
-| Responsive layout | **69 checks**, no page-level horizontal overflow; widths 360, 390, 404–410 (reference views), 430, 768, 820, 1024, 1280 and 1440px exercised |
-| Art and navigation | **135 image-decode checks**, 49 internal URL/fragment targets, sitemap, robots and favicon checked |
-| Structured data | 54 rendered JSON-LD blocks parsed across the layout matrix; no product offers on editorial pages |
-| Accessibility | **49 axe scans**, zero detected WCAG A/AA violations in tested states; includes four open dialogs. Keyboard, Escape, focus restoration and swipe checked separately |
-| Browser/HTTP | No unexpected console errors, uncaught page errors, HTTP failures or failed requests. Intentional 404s and browser-cancelled navigation/prefetch requests are recorded separately |
+### Manual provider acceptance (run after provisioning)
+- Supabase: migrate, `supabase/tests/access-audit.sql` (anon denied, own active profile, runtime immutability), Storage private buckets, Auth sign-in/recover with active-only enumeration safety
+- Razorpay: server order create with `receipt`, HMAC `order_id|payment_id`, captured only, webhook raw-bytes/previous-secret rotation, refunds with `X-Refund-Idempotency` status polling
+- fal: `flux-2-pro/edit` square image + `openrouter/router` copy, budget `FAL_DAILY_SUBMISSION_LIMIT`, lease/queue manifests, human approval
+- Tracking/receipts: 90-day receipt, 45-day masked results, fulfilment history, analytics claims per order/channel
 
-Primary viewports: **410 × 974**, **820 × 1180**, **1440 × 960**, device scale factor 1. Chromium 153.0.8010.0, Playwright, Node 22.22.3. These are browser viewport checks, not a claim of physical iOS/Android or screen-reader certification.
-
-### Interaction coverage
-
-- Campaign arrows and direct slide selection; menu, search, category, wishlist and bag navigation; native search focus and keyboard dismissal.
-- Price validation, facet selection, apply/remove/reset, sort updates, URL state, sort persistence across reloads and fresh navigations.
-- Shared garment/lookbook gallery: thumbnail selection, fullscreen, arrow keys, arrow buttons, dismissal, restored focus and a browser touch swipe.
-- Bag and wishlist storage mutations, quantity limits, recent-view deduplication, browser reopening/reload semantics, stale references, quantity changes, removal and unavailable-item checkout gating. Unit tests use opaque identifiers, not product fixtures or invented merchandise.
-- Guest tracking: invalid mobile number, service unavailable and no number persisted. Receipt page refuses client success flags and unverified receipt tokens.
-- Privacy clear/cancel, corrupted JSON and storage-denied browsing. Confirmed-checkout cleanup matches a one-way quote digest and unchanged bag, without storing a payment secret.
-- Customer-care accordions, internal links and precise anchor targets. Disabled communications services do not offer a pretend send/subscribe action.
-
-## Reference comparison
-
-Images were compared at the size of each phone panel, **not** at the 1536px width of the whole presentation. Outer presentation margins, rounded device frames and drop shadows are not part of the website.
-
-| Surface | Reference and correction |
-|---|---|
-| Home, 410 × 974 | The final announcement is 29px and header 56px; the hero starts at **y=85** and is **324.7px** tall (reference approximately 85 and 325). The category portrait ring measures **64px**. Adjusted the mobile wordmark, removed the desktop hero eyebrow, restored upright mobile headline type and tuned the mobile crop. |
-| Collection, 404 × 974 | Aligned the inner header to **63px**, kept the filter/sort pair on one row, shortened the initial sort control label, and positioned the chips and count above the listing region. The reference's example stock is intentionally replaced by a truthful empty state and a labelled editorial image. |
-| Gallery, 408 × 974 | The shared gallery has a **56px** thumbnail rail, **13px** gutter and **305 × 407px** main portrait, compared with roughly **59px**, **14px**, **306 × 404px** in the reference. Inspected the actual component on the editorial lookbook; no fictional priced PDP was created. |
-
-[Home: reference vs implementation](screenshots/home-reference-comparison.jpg) · [Collection comparison](screenshots/collection-reference-comparison.jpg) · [Gallery comparison](screenshots/gallery-reference-comparison.jpg)
-
-The original's sample free-shipping offer, inventory count and product prices were not copied. The product/checkout/confirmation templates cannot be truthfully demonstrated with filled order data until real services are connected.
-
-## Screenshots
-
-- [Mobile homepage — 410 × 974](screenshots/mobile-home.png)
-- [Tablet homepage — 820 × 1180](screenshots/tablet-home.png)
-- [Desktop homepage — 1440 × 960](screenshots/desktop-home.png)
-- [Mobile collection](screenshots/mobile-collection.png) · [Desktop collection](screenshots/desktop-collection.png) · [Mobile lookbook](screenshots/mobile-lookbook.png)
-
-## Performance and remaining validation
-
-In one **local, unthrottled** desktop sample after the route sweep, the browser observed LCP 104ms, CLS 0 and response start 3ms. This is a development diagnostic, **not** production field performance, a percentile, or an INP result. Measure LCP, INP and CLS at the 75th percentile on the deployed origin under real traffic.
-
-A published product and actual provider responses were not supplied. Live inventory freshness, successful quote/session creation, verified capture, refund/fulfilment events, tracking matches and actual email delivery remain integration acceptance tests, not claims made by this frontend. `npm run test:published` is available for a genuine in-stock slug. Use provider-authorised test transactions only after the backend is connected. See [integration contracts](INTEGRATION.md) and [reproduction commands](../README.md).
+For historical Stage 1 (45×3 routes, 135 decodes, LCP 104ms lab) see `docs/PARADELLE-Stage-1.pdf` and `qa-summary.json`. Stage 2 admin screenshots in `docs/admin/screenshots`.

@@ -1,5 +1,5 @@
 'use client';
-import Image from 'next/image';
+import { GarmentImage as Image } from './garment-image';
 import { useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
 import type { Product } from '@/lib/contracts';

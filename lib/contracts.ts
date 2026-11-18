@@ -23,6 +23,8 @@ export const photoSchema = z.object({ src: imageSrc, alt: text });
 export const variantSchema = z.object({
   id: text,
   size: text.nullable(),
+  colour: text.nullish(),
+  pricePaise: amount.positive().nullish(),
   stock: z.number().int().nonnegative(),
 });
 export const reviewSchema = z.object({
@@ -44,6 +46,7 @@ export const productSchema = z.object({
   seoTitle: text.nullish(),
   seoDescription: text.nullish(),
   sourceReviews: z.array(authorisedReviewSchema).max(10).default([]),
+  id: z.uuid().optional(),
   slug: slugSchema,
   name: text,
   published: z.boolean(),
@@ -77,10 +80,11 @@ export const productSchema = z.object({
 export type Product = z.infer<typeof productSchema>;
 export type ProductTile = Pick<
   Product,
-  'slug' | 'name' | 'images' | 'pricePaise' | 'mrpPaise' | 'newArrival' | 'bestseller'
+  'id' | 'slug' | 'name' | 'images' | 'pricePaise' | 'mrpPaise' | 'newArrival' | 'bestseller'
 >;
 export type ShopProduct = ProductTile & Pick<Product, 'variants'>;
 export const asTile = (p: Product): ShopProduct => ({
+  id: p.id,
   slug: p.slug,
   name: p.name,
   images: [p.images[0]],
@@ -98,6 +102,11 @@ export const settingsSchema = z.object({
   businessName: text.nullish(),
   businessAddress: text.nullish(),
   registration: text.nullish(),
+  identityName: text.optional(),
+  logo: photoSchema.nullish(),
+  seoTitle: text.nullish(),
+  seoDescription: text.nullish(),
+  social: z.record(z.string(), z.url({ protocol: /^https$/ })).default({}),
   flatShippingPaise: amount.nullish(),
   freeShippingFromPaise: amount.nullish(),
   checkoutEnabled: z.boolean().default(false),
@@ -131,6 +140,7 @@ export const quoteSchema = z
     shippingPaise: amount,
     discountPaise: amount,
     totalPaise: amount.positive(),
+    taxPaise: amount.optional(),
     delivery: text,
     expiresAt: z.iso.datetime({ offset: true }),
   })
@@ -148,6 +158,13 @@ export const paymentSessionSchema = z.object({
     );
   }),
 });
+export const standardSessionSchema = z.object({
+  quoteId: z.uuid(),
+  keyId: z.string().regex(/^rzp_(?:test|live)_[A-Za-z0-9]+$/),
+  orderId: z.string().regex(/^order_[A-Za-z0-9]+$/),
+  amount: z.int().positive(),
+  currency: z.literal('INR'),
+});
 export const trackingSchema = z.object({
   orders: z.array(
     z.object({
@@ -163,12 +180,22 @@ export const trackingSchema = z.object({
 export const receiptSchema = z.object({
   verified: z.literal(true),
   paymentStatus: z.literal('captured'),
+  reviewEligible: z.boolean().optional(),
+  shippingPaise: amount.optional(),
+  taxPaise: amount.optional(),
   reference: text,
   quoteId: text,
   totalPaise: amount,
   items: z
     .array(
-      z.object({ name: text, size: text.nullable(), quantity: z.int().positive(), lineTotalPaise: amount }),
+      z.object({
+        productId: z.uuid().optional(),
+        revenuePaise: amount.optional(),
+        name: text,
+        size: text.nullable(),
+        quantity: z.int().positive(),
+        lineTotalPaise: amount,
+      }),
     )
     .min(1),
   delivery: text,

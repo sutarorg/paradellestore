@@ -1,12 +1,17 @@
 import Link from 'next/link';
-import Image from 'next/image';
+import { GarmentImage as Image } from './garment-image';
 import { ArrowUpRight } from 'lucide-react';
 import type { ProductTile } from '@/lib/contracts';
 import { discount, money } from '@/lib/shop';
 import { WishButton } from './wish-button';
 export function ProductCard({ product: p }: { product: ProductTile }) {
   return (
-    <article className="product-card">
+    <article
+      className="product-card"
+      data-metric-item={p.id}
+      data-metric-kind="tile"
+      data-metric-price={p.pricePaise}
+    >
       <div className="card-photo">
         <Link href={`/kurtis/${p.slug}`}>
           <Image

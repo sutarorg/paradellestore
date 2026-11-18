@@ -40,6 +40,7 @@ export const costSchema = z.object({
   shipping: amt.nullable(),
   feeFixed: amt.nullable(),
   reserve: amt.nullable(),
+  discountAllowance: amt.nullable().optional(),
   feeRate: bps.nullable(),
   margin: bps.nullable(),
   tax: z.enum(['unspecified', 'none', 'inclusive']),
@@ -84,6 +85,8 @@ export const variant = z.object({
   sku: short,
   stock: z.int().min(0).max(1000000),
   enabled: z.boolean(),
+  colour: short.optional(),
+  priceOverride: amt.positive().nullable().optional(),
 });
 export const attrs = [
   'fabric',
@@ -135,6 +138,12 @@ export const draftSchema = z.object({
   pricePaise: amt.nullable(),
   variants: z.array(variant).max(40),
   images: z.array(photo).max(20),
+  sourceUrl: short.optional(),
+  sourcePrice: amt.nullable().optional(),
+  compareAt: amt.positive().nullable().optional(),
+  mrpVerified: z.boolean().optional(),
+  featured: z.boolean().optional(),
+  bestseller: z.boolean().optional(),
   factsVerified: z.boolean(),
   imageRights: z.boolean(),
 });
@@ -216,6 +225,7 @@ export const orderLine = z.object({
   size: short,
   quantity: z.int().positive(),
   unitPaise: amt,
+  sourceUrl: short.nullish(),
 });
 export const orderRow = z.object({
   ...base,
@@ -252,6 +262,17 @@ export const orderDetail = orderRow.extend({
   paymentReference: short,
   paymentAt: date.nullable(),
   manual: manualSchema,
+  exception: short.nullish(),
+  refunds: z
+    .array(
+      z.object({
+        id: key,
+        amount: amt,
+        status: z.enum(['requested', 'pending', 'processed', 'failed']),
+        createdAt: date,
+      }),
+    )
+    .optional(),
   history: z.array(activity),
 });
 export type Order = z.infer<typeof orderDetail>;
@@ -430,6 +451,7 @@ export const settingsSections = [
   'identity',
   'contact',
   'pricing',
+  'delivery',
   'social',
   'policies',
   'seo',
@@ -445,6 +467,12 @@ export const settings = z.object({
     registration: short,
   }),
   pricing: costSchema,
+  delivery: z.object({
+    shipping: amt.nullable(),
+    freeFrom: amt.nullable(),
+    gst: z.int().min(0).max(10000),
+    pins: z.array(z.string().regex(/^[1-9]\d{5}$/)).max(10000),
+  }),
   social: z.object({ instagram: short, facebook: short, pinterest: short }),
   policies: z.record(z.string(), z.array(policyBlock)),
   seo: z.object({ title: short, description: text }),
@@ -455,6 +483,7 @@ export const blankSettings = (): AdminSettings => ({
   identity: { name: 'PARADELLE', logo: null, announcement: '' },
   contact: { email: '', phone: '', businessName: '', address: '', registration: '' },
   pricing: blankCosts(),
+  delivery: { shipping: null, freeFrom: null, gst: 0, pins: [] },
   social: { instagram: '', facebook: '', pinterest: '' },
   policies: {},
   seo: { title: '', description: '' },

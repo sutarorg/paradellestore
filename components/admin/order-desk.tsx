@@ -79,6 +79,11 @@ export function OrderDesk({ o }: { o: Order }) {
               <div key="i" className="ad-productcell">
                 {l.image && <PrivateImage src={l.image} alt="" width={40} height={50} />}
                 <b>{l.name}</b>
+                {l.sourceUrl && meeshoUrl(l.sourceUrl) && (
+                  <a href={l.sourceUrl} target="_blank" rel="noreferrer">
+                    Check source
+                  </a>
+                )}
               </div>,
               l.size,
               l.quantity,
@@ -111,6 +116,13 @@ export function OrderDesk({ o }: { o: Order }) {
             Place the purchase on Meesho yourself. These controls record your work; they do not purchase
             items, sync stock or change payment status.
           </InfoBox>
+          {o.exception && <InfoBox error>{o.exception}</InfoBox>}
+          {o.fulfilment === 'pending-purchase' && (
+            <InfoBox>
+              Paid · manual purchase pending. Check the source, chosen size, current availability and resale
+              permission before placing the purchase.
+            </InfoBox>
+          )}
           {source && (
             <a className="ad-textlink" href={source} target="_blank" rel="noopener noreferrer">
               Open source product
@@ -204,7 +216,7 @@ export function OrderDesk({ o }: { o: Order }) {
                 Initiate refund
               </Button>
             )}
-            {['refund-pending', 'partially-refunded', 'refunded'].includes(o.payment) && (
+            {o.payment === 'refund-pending' && (
               <Button
                 secondary
                 busy={cmd.busy}
@@ -216,6 +228,11 @@ export function OrderDesk({ o }: { o: Order }) {
               </Button>
             )}
           </div>
+          {o.refunds?.map((r) => (
+            <p key={r.id}>
+              {money(r.amount)} · {human(r.status)} refund
+            </p>
+          ))}
           {cmd.error && !confirm && <InfoBox error>{cmd.error}</InfoBox>}
         </section>
         <section className="ad-panel">

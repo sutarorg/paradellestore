@@ -116,7 +116,12 @@ export function resolveBag(cart: CartLine[], products: ShopProduct[]) {
   return cart.map((line) => {
     const product = products.find((p) => p.slug === line.slug);
     const variant = product?.variants.find((v) => v.id === line.variantId);
-    return { ...line, product, variant, valid: !!variant && line.quantity <= variant.stock };
+    return {
+      ...line,
+      product: product && variant?.pricePaise ? { ...product, pricePaise: variant.pricePaise } : product,
+      variant,
+      valid: !!variant && line.quantity <= variant.stock,
+    };
   });
 }
 export function nextQuantity(existing: number, requested: number, stock: number) {

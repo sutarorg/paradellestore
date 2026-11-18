@@ -18,7 +18,7 @@ export const policies: Record<string, Policy> = {
       },
       {
         title: 'Following a shipment',
-        body: 'Use Track order with the mobile number entered at checkout. A carrier link appears once shipment details are available. A confirmed order may not yet have a tracking link while it is being prepared.',
+        body: 'Use Track order with the mobile number entered at checkout. Phone lookup shows only a limited recent status. For shipment-specific assistance use the store’s customer care channel.',
       },
       {
         title: 'Address changes or delivery issues',
@@ -75,6 +75,10 @@ export const policies: Record<string, Policy> = {
       {
         title: 'Service providers and retention',
         body: 'Order information is used by the services needed for payment, fulfilment, delivery and customer support. Order records may need to be retained for transaction handling and legal obligations. Removing local shopping data does not remove those records.',
+      },
+      {
+        title: 'Optional measurement',
+        body: 'Analytics and advertising measurement are separate, off by default, and never required for checkout. Use Privacy choices in the footer to opt in or withdraw. Optional events contain product identifiers, quantities and amounts, not your contact or delivery details.',
       },
       {
         title: 'Optional communications',

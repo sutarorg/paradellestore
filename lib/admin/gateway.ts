@@ -1,6 +1,8 @@
 import 'server-only';
 import { cache } from 'react';
-import { cookies } from 'next/headers';
+import { cookies, headers as requestHeaders } from 'next/headers';
+import { configuredDB, safeError } from '../server/base';
+import { dispatchAdmin, respond } from '../server/http';
 import { z } from 'zod';
 import {
   type Access,
@@ -26,11 +28,11 @@ import {
 import { type ListQuery, searchQuery } from './rules';
 export const cookieName = 'paradelle_staff';
 export const disconnected = 'Private services are not connected. Nothing has been saved.';
-export const configured = () => Boolean(process.env.PARADELLE_ADMIN_API_URL?.trim());
+export const configured = () => configuredDB() || Boolean(process.env.PARADELLE_ADMIN_API_URL?.trim());
 export async function request(path: string, init: RequestInit = {}, authenticated = true) {
   const raw = process.env.PARADELLE_ADMIN_API_URL;
-  if (!raw) throw new Error('unconfigured');
-  const base = new URL(raw);
+  if (!raw && !configuredDB()) throw new Error('unconfigured');
+  const base = new URL(configuredDB() ? 'https://paradelle.internal' : (raw as string));
   if (
     (base.protocol !== 'https:' &&
       !(base.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(base.hostname))) ||
@@ -47,6 +49,18 @@ export async function request(path: string, init: RequestInit = {}, authenticate
     const token = (await cookies()).get(cookieName)?.value;
     if (!token || !validToken(token)) throw new Error('no session');
     h.set('authorization', `Bearer ${token}`);
+  }
+  if (configuredDB()) {
+    const incoming = await requestHeaders();
+    for (const k of ['x-vercel-forwarded-for', 'x-real-ip'])
+      if (incoming.has(k)) h.set(k, incoming.get(k) ?? '');
+    const req = new Request(`${base.origin}/${path}`, { ...init, headers: h });
+    try {
+      return await dispatchAdmin(req, new URL(req.url).pathname.slice(1).split('/'), true);
+    } catch (e) {
+      const f = safeError(e);
+      return respond({ error: { message: f.message } }, f.status);
+    }
   }
   return fetch(`${base.href.replace(/\/$/, '')}/${path}`, {
     ...init,

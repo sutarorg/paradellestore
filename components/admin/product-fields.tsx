@@ -59,6 +59,7 @@ export function Pricing({
     ['shipping', 'Shipping'],
     ['feeFixed', 'Fixed payment fees'],
     ['reserve', 'Returns reserve'],
+    ['discountAllowance', 'Discount allowance'],
   ] as const;
   const calc = commercePrice(value);
   const current = price != null && calc.ok ? contribution(price, calc) : null;
@@ -73,7 +74,7 @@ export function Pricing({
           <MoneyField
             key={k}
             label={`${label} (₹)`}
-            value={value[k]}
+            value={value[k] ?? null}
             onChange={(n) => set({ ...value, [k]: n })}
           />
         ))}
@@ -223,6 +224,42 @@ export function ListingFields({
           onChange={(description) => patch({ description })}
         />
       </div>
+      <details className="ad-disclose">
+        <summary>Source, pricing evidence & merchandising</summary>
+        <div className="ad-formgrid">
+          <Field
+            label="Licensed Meesho source URL"
+            type="url"
+            value={d.sourceUrl || ''}
+            onChange={(sourceUrl) => patch({ sourceUrl })}
+          />
+          <MoneyField
+            label="Source listing price (₹)"
+            value={d.sourcePrice ?? null}
+            onChange={(sourcePrice) => patch({ sourcePrice })}
+          />
+          <MoneyField
+            label="Genuine MRP (₹, optional)"
+            value={d.compareAt ?? null}
+            onChange={(compareAt) => patch({ compareAt, mrpVerified: false })}
+          />
+          <Check
+            label="I verified the stated MRP against the garment or lawful supplier evidence."
+            value={!!d.mrpVerified}
+            onChange={(mrpVerified) => patch({ mrpVerified })}
+          />
+          <Check
+            label="Feature in the collection"
+            value={!!d.featured}
+            onChange={(featured) => patch({ featured })}
+          />
+          <Check
+            label="Bestseller — supported by actual sales records"
+            value={!!d.bestseller}
+            onChange={(bestseller) => patch({ bestseller })}
+          />
+        </div>
+      </details>
       {includeSpecs && <Specs d={d} set={set} />}
       <details className="ad-disclose">
         <summary>Search engine listing</summary>
@@ -290,6 +327,16 @@ export function Variants({ d, set }: { d: Draft; set: (d: Draft) => void }) {
             min={0}
             step="1"
             onChange={(s) => replace(i, { stock: Number(s) })}
+          />
+          <Field
+            label="Variant colour"
+            value={v.colour || ''}
+            onChange={(colour) => replace(i, { colour })}
+          />
+          <MoneyField
+            label="Size price override (₹)"
+            value={v.priceOverride ?? null}
+            onChange={(priceOverride) => replace(i, { priceOverride })}
           />
           <Check label="Enabled" value={v.enabled} onChange={(enabled) => replace(i, { enabled })} />
           <button

@@ -1,0 +1,15 @@
+// Runs only inside an opaque sandbox, not in the checkout or admin document. No form or top-URL access.
+(() => {
+  if (window.parent === window) return;
+  const events = {view_item_list:'ProductListView',select_item:'SelectItem',view_item:'ViewContent',add_to_cart:'AddToCart',remove_from_cart:'RemoveFromCart',begin_checkout:'InitiateCheckout',add_payment_info:'AddPaymentInfo',purchase:'Purchase'};
+  const custom=new Set(['view_item_list','select_item','remove_from_cart']);let initialized=false,ga='',meta='';
+  const load=src=>{const script=document.createElement('script');script.async=true;script.src=src;script.referrerPolicy='no-referrer';document.head.append(script);};
+  addEventListener('message',e=>{if(e.source!==parent||e.origin!==new URL(location.href).origin)return;const x=e.data;if(!x||typeof x!=='object')return;
+    if(x.revoke){window.gtag?.('consent','update',{analytics_storage:'denied',ad_storage:'denied'});window.fbq?.('consent','revoke');ga='';meta='';return;}
+    if(x.init&&!initialized){initialized=true;if(/^G-[A-Z0-9]{3,20}$/.test(x.ga)){ga=x.ga;window.dataLayer=[];window.gtag=function(){window.dataLayer.push(arguments);};gtag('consent','default',{analytics_storage:'denied',ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied'});gtag('consent','update',{analytics_storage:'granted'});gtag('js',new Date());gtag('config',ga,{client_id:x.clientId,send_page_view:false,allow_google_signals:false,allow_ad_personalization_signals:false,page_location:new URL('/',location.href).href,page_referrer:''});load('https://www.googletagmanager.com/gtag/js?id='+ga);}
+      if(/^\d{5,24}$/.test(x.meta)){meta=x.meta;const f=function(){if(f.callMethod)f.callMethod.apply(f,arguments);else f.queue.push(arguments);};f.queue=[];f.loaded=true;f.version='2.0';f.push=f;window.fbq=window._fbq=f;f('consent','revoke');f('set','autoConfig',false,meta);f('init',meta);f('consent','grant');load('https://connect.facebook.net/en_US/fbevents.js');}return;}
+    if(!Object.hasOwn(events,x.name)||!Array.isArray(x.items))return;const items=x.items.filter(i=>/^[a-f0-9-]{36}$/i.test(i.item_id)&&Number.isInteger(i.quantity)).slice(0,40).map(i=>({item_id:i.item_id,quantity:i.quantity,...(Number.isFinite(i.price)?{price:i.price}:{})}));if(!items.length)return;
+    const order=/^PAR-\d{5,}$/.test(x.transaction_id)?x.transaction_id:undefined;if(x.name==='purchase'&&!order)return;const value=Number.isFinite(x.value)?x.value:items.every(i=>i.price!=null)?items.reduce((n,i)=>n+i.price*i.quantity,0):undefined;
+    if(x.channel==='ga'&&ga)gtag('event',x.name,{items,currency:'INR',value,transaction_id:order,send_to:ga});if(x.channel==='meta'&&meta)fbq(custom.has(x.name)?'trackCustom':'track',events[x.name],{content_ids:items.map(i=>i.item_id),content_type:'product',currency:'INR',value,contents:items.map(i=>({id:i.item_id,quantity:i.quantity,item_price:i.price}))},order?{eventID:order}:{});
+  });parent.postMessage('paradelle:ready',new URL(location.href).origin);
+})();

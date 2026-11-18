@@ -10,6 +10,7 @@
       "app/**",
       "components/**",
       "lib/**",
+      "src/**",
       "tests/**",
       "scripts/**",
       "*.ts",

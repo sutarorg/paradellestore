@@ -1,51 +1,55 @@
-# Public storefront integration
+# Public storefront integration · Stage 3
 
-The private Stage 2 interface and its Stage 3 service contract are documented separately in [the merchant studio handoff](admin/README.md).
+Private Stage 2/3 contracts supplement this: [merchant studio](admin/README.md), [provider contract](admin/CONTRACT.md), [OpenAPI](admin/openapi.json), [Stage 3 report](STAGE3-REPORT.md), [deployment](production/DEPLOYMENT.md).
 
 ## Configuration
+`.env.example` is canonical, non-secret. Preview and Production MUST use separate Supabase projects and `rzp_test_` vs `rzp_live_` keys. `DATABASE_URL` is Supavisor transaction pooler (6543) TLS-verified, dedicated `paradelle_app` login granted ONLY `paradelle_runtime`. Never expose `DATABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `APP_HMAC_SECRET`, `CRON_SECRET`, `RAZORPAY_*_SECRET` or `FAL_KEY` to browser or `NEXT_PUBLIC_` prefix. `PRODUCT_IMAGE_HOST` and `SITE_ORIGIN` rebuild-required. Run `node scripts/check-configuration.mjs` before deploy.
 
-Start with `.env.example`. `STOREFRONT_API_URL` is a **server-only** base URL including the API version prefix. Leave it unset in Stage 1. Use a trusted HTTPS API in production. `PRODUCT_IMAGE_HOST` is the exact hostname of the merchant's HTTPS image origin; same-origin media paths also work. `SITE_ORIGIN` defaults to `https://paradelle.store`. Configure these for the build and runtime. Rebuild for image-origin or canonical-origin changes. Run a Next-capable deployment with image optimisation; this application is not a static HTML export.
+No browser code contacts `localhost` or Razorpay SDK directly. Same-origin Server Actions → private DAL or `configuredDB() ? guestCall : STOREFRONT_API_URL`. Browser leaves only for backend-issued Razorpay hosted URL after reviewing a server quote. Arena preview allows its action origin; production allows none extra.
 
-No browser code contacts `localhost`, a separate API host or the Razorpay SDK. Customer requests use same-origin Server Actions. The browser leaves the site for a validated, **backend-issued hosted prepaid payment URL** only after the shopper reviews a quote. The isolated Arena preview allows its specific action origin; production normally needs no extra allowed origin.
+## Database and migrations
+Six ordered migrations (`supabase/migrations`):
 
-## Stages and ownership
+1. `20261118000100_commerce` — `shop` schema, `paradelle_runtime` role, tables: `profiles`, `staff_sessions`, `store_settings`, `products`, `assets`, `product_images`, `variants`, `stock_history`, `coupons`, `customers`, `addresses`, `checkout_intents` (+ `reservations`), `orders`/`order_items`/`payments`/`payment_events`/`refunds`/`order_fulfilment`, `product_import_jobs`, `product_reviews`, `admin_activity_logs`, `command_receipts`, `work_queue`, `rate_windows`; indexes + `shop.next_order_number()` (`PAR-00001`…).
+2. `20261118000200_access_storage` — enable RLS per table, `paradelle_runtime` grants, `authenticated` own-profile policy, private `product-images`/`site-assets` buckets, restrictive `storage.objects` policy (no anon).
+3. `20261118000300_projections` — `security_invoker` views `published_catalogue`, `product_register`, `order_register`, `customer_register`, `review_register`, `inventory_register`, `job_register`, `analytics_claims`.
+4. `20261118000400_reconciliation` — `checkout_intents.checked_at/provider_state`, `work_queue` manifests, `store_settings.shipping_gst_bps`, `variant_option` uniqueness, ancillary indexes.
+5. `20261118000500_evidence` — `assets.renditions`, `order_items` SKU/colour/source-price/discount/tax snapshots, `shop.review_evidence` trigger (licensed ≤10, purchase requires delivered order), revoke email update.
+6. `20261118000600_operations` — `fulfilment_revisions` audit, `import_source_once`, `refund_one_inflight`.
 
-**Stage 2 — merchant administration:** publish real products, assign stable slugs and variant identifiers, manage stock, supply descriptive images, product-specific fit charts, material/care information, delivery and return conditions. Only mark an arrival or bestseller when merchant data supports the designation. Verify review provenance before publishing it. Manage capability switches, legal information, service contacts, shipping amounts, supported methods and policy sections in `settingsSchema`. Do not enable a service before its configuration works.
+Apply with `supabase db push`. `supabase/config.toml` (PG17, no seed, no signup, apex URLs). Create login `paradelle_app → paradelle_runtime`. Insert `auth.users` + `shop.profiles` active rows for each staffer (least privilege).
 
-**Stage 3 — trusted services:** own stock and price validation, serviceability, tax/charges, any promotion, quotes, payment-session creation, signature/webhook verification, reconciliation, real order records, fulfilment updates, tracking rate limiting, contact delivery and marketing consent/unsubscribe. The frontend is not an authorisation boundary. Rate-limit its public actions at the service/edge; never rely on hidden controls or a localStorage flag.
+## Stages
+**Stage 2** — publish real products/variants/stock/images/SEO, manual fulfilment, `settingsSchema`.
+**Stage 3** — server-owned stock/price validation, serviceability (Indian regions + PINs, `shipping_gst_bps`), quotes/holds, Razorpay order/signature/webhook/reconciliation, receipts/tracking/reviews, media renditions, worker queue, privacy/measurement. Frontend not an auth boundary; rate-limit at service/edge.
 
-## HTTP contracts
+## HTTP contracts (`lib/contracts.ts`)
 
-The source of truth is [`lib/contracts.ts`](../lib/contracts.ts). Responses are JSON, validated before display. The gateway strips non-contract properties and never forwards raw backend errors into the UI. Prices and shipping fees are integers in **paise**, not rupees. Nullable shipping is **unknown**, not free. The amount in the payment session must exactly match the reviewed quote.
-
-| Method and path relative to API base | Input → successful response |
+| Method/path relative to API base | Input → success |
 |---|---|
-| `GET settings` | `settingsSchema`. Optional fields are omitted when not supplied. Capabilities default **off**. |
-| `GET catalogue` | `catalogueSchema`: a public `products` array. An actual empty array is valid. Never include internal/customer-only data. Only `published` products and verified native purchase reviews are rendered as customer feedback. Optional `sourceReviews` (at most ten, explicitly approved and permission-granted) are shown separately on the PDP, never as PARADELLE purchases. Optional `seoTitle`/`seoDescription` override PDP metadata when supplied. Registry-backed flags, not a client guess, control the homepage shelves. |
-| `POST checkout/quote` | `{ lines: [{slug, variantId, quantity}], address: {fullName, mobile, address, city, state, pin}, email?: string, termsAccepted: true }` → `quoteSchema`: opaque quote ID, INR currency, subtotal, shipping, discount, total, delivery information and expiry. Optional contact email is not saved with the device address and is not a marketing opt-in. Reject unserviceable locations, changed variants or insufficient stock rather than charging a different order. |
-| `POST checkout/session` | `{ quoteId }` → `paymentSessionSchema`: matching quote ID and a hosted HTTPS Razorpay payment URL. Validate quote ownership/capability, terms, expiry and immutable total. Make this operation idempotent. Never accept a browser price, or introduce a further charge after review. |
-| `POST payments/receipt` | `{ receipt }` → `receiptSchema` **only after verified capture**. Return order reference, quote ID, charged total, purchased lines and delivery information. A provider redirect or client-reported success is not evidence of payment. |
-| `POST orders/track` | `{ mobile }`, normalised to 10 Indian digits → `trackingSchema`, limited order summaries. A matched record contains a reference, public status, product names and latest update; carrier and HTTPS tracking URL are optional. No match: `{ "orders": [] }` or 404. |
-| `POST newsletter` | `{ email, consent: true }` → `{ subscribed: true }` only after actual subscription. Provide consent recording and unsubscribe handling. |
-| `POST contact` | `{ email, message }` → `{ received: true }` only after actual receipt. |
+| `GET settings` | `settingsSchema` (disabled off) |
+| `GET catalogue` | `catalogueSchema` (published only) |
+| `POST checkout/quote` | `{lines:{slug,variantId,quantity}[], address:{fullName,mobile,address,city,state: Indian region,pin},email?,termsAccepted}` → `quoteSchema` (opaque ID, paise totals, 15-min reserve, delivery note) |
+| `POST checkout/session` | `{quoteId}` → `paymentSessionSchema` (matching quote, hosted `https://api.razorpay.com`/`checkout.razorpay.com` URL) |
+| `POST payments/receipt` | `{receipt}` → `receiptSchema` only after captured |
+| `POST orders/track` | `{mobile}` → `trackingSchema` masked `PAR-…` results |
+| `POST newsletter/contact` | opt-in only |
 
-Public reads use a short revalidation window (60 seconds) and request deduplication. Personal lookups and all POSTs use `no-store` and a bounded timeout. A malformed response, timeout, 5xx or unavailable service cannot become a successful payment, registration or order. 409/410 invalidates the checkout attempt; 429 asks the shopper to wait; tracking distinguishes a true no-match from an outage. See `lib/gateway.ts` and `lib/actions.ts`.
+Prices paise, shipping nullable (unknown≠free), session amount == quote. Public reads `revalidate:60`, POSTs `no-store`, 8s timeout. `409/410` stale, `429` throttle. See `lib/gateway.ts`, `lib/actions.ts`, `lib/server/{checkout,http}`.
 
-The current catalogue adapter suits a curated assortment: it fetches the public snapshot on the server, applies deterministic filtering/sorting there, and renders **12 results per page**. It does not ship the whole catalogue to a shopper's browser. If the catalogue outgrows a cached snapshot, put indexed querying and facet aggregates behind that adapter while preserving URLs, page sizes and the view models. Supported URL fields: `category`, `edit`, `q`, `sort`, `min`, `max`, repeated `fabric/size/style/colour/availability/occasion`, and `page`. Filter prices in URLs are rupees. Different facets combine with AND; selections within a facet combine with OR. Size matching requires available stock.
+Current catalogue adapter: server-side filtering/sorting, 12/pg, facets `category/edit/q/sort/min/max/fabric/size/style/colour/availability/occasion/page` (rupee URLs → paise query, AND across facets, OR inside).
 
-## Payment and privacy boundary
-
-1. The browser bag is an intention to buy, not a reservation. Reconcile stored IDs with current published catalogue records. Reject deleted variants and quantities above stock.
-2. Collect a delivery address only when checkout is enabled. Quote on the server, display its final breakdown and delivery note, then request a prepaid session only on explicit payment action.
-3. Stage 3 generates and verifies the Razorpay payment/order independently, handles retries and webhooks, and produces an unguessable, time-limited receipt capability. Persist the actual order **on the backend**. Redirect to `/order-success?receipt=…`. Use 24–192 URL-safe alphanumeric/underscore/hyphen characters for the capability. Do not log receipt or tracking secrets.
-4. The receipt page ignores `paid`, `success` and similar query flags. It verifies with the server and requires both `verified: true` and `paymentStatus: "captured"`. Otherwise it offers tracking rather than suggesting another immediate payment.
-5. The browser stores neither the payment URL nor the receipt nor raw quote ID. A one-way quote digest and the bag fingerprint allow clearing just the unchanged bag associated with a confirmed checkout. Later shopping is not erased by an older receipt. If persistent storage or hashing is unavailable, the bag is not automatically cleared on another visit.
-6. Tracking uses a mobile number **without OTP or customer login**. Enforce strict rate limits, small response limits and data minimisation on the backend. Never return addresses, phone numbers, emails, receipt capabilities or payment identifiers. Provide only shopper-safe product/status text. The server adapter masks references before they reach the browser.
+## Payment/privacy
+1. Bag = intent, not reservation; reconcile IDs, reject deleted/over-quota.
+2. Server quote → review → explicit payment action → server Razorpay order (`receipt` unique, `FAL_DAILY_SUBMISSION_LIMIT` bounded).
+3. Backend verifies HMAC/`paid` captured, persists order, returns 24–192 char receipt (`order-success?receipt=`); do not log secrets.
+4. Receipt ignores `?paid` flags; requires `verified:true && paymentStatus:captured`.
+5. Browser stores no payment URL/receipt/quoteId; one-way digest clears only unchanged bag.
+6. Tracking: mobile without OTP, server-masked (last 4 visible in desk only), rate-limited.
+7. Measurement: GA4/Meta off by default, 180-day `paradelle:privacy:v1`, sandbox `public/signals.html` with allowlist, per-order `analytics_claims` dedup (see `lib/measurement.ts`, `signals.js`, `completed-purchase.tsx`). No form/URL/address/payment PII in tags.
 
 ## Local storage
-
-`paradelle:shopping:v1` holds only cart references/quantities, wishlist IDs, up to 12 recently viewed IDs, preferred sort, optional address and checkout reconciliation data. Data is sanitised on read; unsupported/corrupt values are discarded. Local persistence is convenience, not secure authentication. Address storage is explicitly optional, expires after 30 days and can be cleared in checkout or privacy settings. No cross-device synchronisation is claimed. No payment fields, order history, OTPs or card credentials are stored.
+`paradelle:shopping:v1` (cart ids/qty, wishlist, ≤12 recent, sort, optional address 30d) + `paradelle:privacy:v1`. Sanitised on read; corruption/denial recovers.
 
 ## Launch gates
-
-Supply real catalogue media and variants; approve merchant identity, support channels, legal policies, shipping fees/serviceability and tax presentation; configure the canonical domain and TLS; enable Razorpay prepaid methods and backend verification; connect tracking and optional consent-based messaging. Run the published-product test and authorised provider sandbox end-to-end tests before opening sales. Review policy copy with the actual merchant. Monitor deployed Core Web Vitals and real-device accessibility rather than treating a local lab reading as a production guarantee.
+Real media/variants, merchant identity/policies/shipping, canonical TLS, Razorpay methods + verification, tracking, consent-based messaging. Run `QA_PRODUCT_SLUG` published test + provider sandbox E2E before opening. See deployment doc.

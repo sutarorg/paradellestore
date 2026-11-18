@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronDown, Package, RotateCcw } from 'lucide-react';
-import { getCatalogue } from '@/lib/gateway';
+import { getSelection } from '@/lib/gateway';
 import { pageMeta, site } from '@/lib/seo';
 import { availability, discount, money } from '@/lib/shop';
 import { Gallery } from '@/components/product-gallery';
@@ -13,7 +13,7 @@ export const revalidate = 60;
 type Props = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
-  const { products } = await getCatalogue();
+  const { products } = await getSelection('detail', slug);
   const p = products.find((x) => x.slug === slug);
   return p
     ? pageMeta(
@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Props) {
 }
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
-  const { products, unavailable } = await getCatalogue();
+  const { products, unavailable } = await getSelection('detail', slug);
   if (unavailable)
     return (
       <div className="frame state-page">
@@ -39,7 +39,7 @@ export default async function ProductPage({ params }: Props) {
   const p = products.find((x) => x.slug === slug);
   if (!p) notFound();
   const saving = discount(p.pricePaise, p.mrpPaise);
-  const related = products
+  const related = (await getSelection('related', p.categories[0], p.slug)).products
     .filter((o) => o.slug !== slug && o.categories.some((c) => p.categories.includes(c)))
     .slice(0, 4);
   return (
@@ -52,7 +52,12 @@ export default async function ProductPage({ params }: Props) {
       />
       <div className="product-layout">
         <Gallery images={p.images} />
-        <div className="product-information">
+        <div
+          className="product-information"
+          data-metric-item={p.id}
+          data-metric-kind="detail"
+          data-metric-price={p.pricePaise}
+        >
           <Eyebrow decor>The Paradelle collection</Eyebrow>
           <h1>{p.name}</h1>
           <div className="product-price">

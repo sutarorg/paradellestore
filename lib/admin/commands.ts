@@ -53,6 +53,7 @@ export const command = z.discriminatedUnion('op', [
   op('import.facts', { ...ref, facts: z.array(fact).min(1).max(50) }),
   op('import.content', { ...ref }),
   op('import.save-listing', { ...ref, draft: draftSchema }),
+  op('import.references', { ...ref, referenceIds: z.array(key).max(4), rightsConfirmed: z.literal(true) }),
   op('import.images', {
     ...ref,
     referenceIds: z.array(key).min(1).max(20),
@@ -111,6 +112,7 @@ export const receipt = z.object({
   id: key,
   revision: z.int().nonnegative(),
   eventId: key,
+  productId: key.optional(),
   outcome: z.enum(['applied', 'queued']),
 });
 export type Receipt = z.infer<typeof receipt>;

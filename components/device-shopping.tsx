@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import { GarmentImage as Image } from './garment-image';
 import { ArrowRight, Heart, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import { lookupProducts } from '@/lib/actions';
 import type { CartLine, Result, Settings, ShopProduct } from '@/lib/contracts';
@@ -317,7 +317,7 @@ export function DevicePrivacy() {
         <Modal title="Clear this browser’s shopping data?" mode="sheet" close={() => setConfirm(false)}>
           <p className="muted">
             This removes the bag, wishlist, recently viewed pieces, shopping preferences and any saved address
-            on this browser. This can’t be undone.
+            and receipt access on this browser. This can’t be undone.
           </p>
           <div className="dialog-actions">
             <button
@@ -331,8 +331,18 @@ export function DevicePrivacy() {
             <button
               type="button"
               className="btn btn-dark"
-              onClick={() => {
+              onClick={async () => {
                 forgetDevice();
+                try {
+                  const r = await fetch('/api/device/forget', {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: '{}',
+                  });
+                  if (!r.ok) throw new Error();
+                } catch {
+                  toast('To remove receipt access too, clear this site in browser settings.');
+                }
                 setConfirm(false);
               }}
             >

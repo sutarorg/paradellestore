@@ -2,6 +2,8 @@
 
 One Next.js application for the guest Kurti storefront at **paradelle.store** and its private merchant workspace under **`/admin`**. There is no seeded catalogue, separate admin deployment, customer login or simulated payment/import backend.
 
+**Stage 3:** local PostgreSQL + provider contracts verified (14 commerce checks) — not yet hosted. See [deployment checklist](docs/production/DEPLOYMENT.md) for remaining acceptance.
+
 **Stage 2:** [Merchant studio and route map](docs/admin/README.md) · [Stage 3 provider contract](docs/admin/CONTRACT.md) · [OpenAPI 3.1](docs/admin/openapi.json) · [Verification and screenshots](docs/admin/QA.md).
 
 **Try the workspace:** open `/admin`, `/admin/importer` or `/admin/products/new`. The disconnected shell contains no private records, and neither authentication nor writes can succeed until Stage 3 supplies trusted services. Public shopping URLs and the Stage 1 reference composition are unchanged.
@@ -73,6 +75,8 @@ npm run test:admin
 After connecting a **real, published, in-stock piece**, set `QA_PRODUCT_SLUG` and run `npm run test:published` against a test deployment. This exercises the published merchandising path without checking out, paying, emailing or creating an order.
 
 ## Handoff
+
+[Stage 3 isolated verification (PDF to be generated)](docs/PARADELLE-Stage-3.pdf) · [Stage 3 report](docs/STAGE3-REPORT.md) · [Deployment](docs/production/DEPLOYMENT.md) · [Integration](docs/INTEGRATION.md) · [QA](docs/QA.md) · [Private contract](docs/admin/CONTRACT.md) · [OpenAPI](docs/admin/openapi.json)
 
 [Download the illustrated Stage 2 handoff (PDF)](docs/PARADELLE-Stage-2.pdf) · [Staff access, private routes, importer and operations](docs/admin/README.md)
 

@@ -1,5 +1,6 @@
 import { CircleCheck, ReceiptText } from 'lucide-react';
 import { ArrowLink, ButtonLink, Crumbs, EmptyState, PageHead } from '@/components/ui';
+import { CompletedPurchase } from '@/components/completed-purchase';
 import { SettledBag } from '@/components/order';
 import { verifyReceipt } from '@/lib/gateway';
 import { pageMeta } from '@/lib/seo';
@@ -17,7 +18,7 @@ export default async function OrderSuccess({
   searchParams: Promise<{ receipt?: string }>;
 }) {
   const raw = (await searchParams).receipt;
-  const order = typeof raw === 'string' ? await verifyReceipt(raw) : null;
+  const order = await verifyReceipt(typeof raw === 'string' ? raw : undefined);
   return (
     <div className="frame standard-page">
       <Crumbs items={[{ label: 'Order status', href: '/order-success' }]} />
@@ -44,6 +45,7 @@ export default async function OrderSuccess({
               </li>
             ))}
           </ul>
+          <CompletedPurchase order={order} />
           <h3>Delivery information</h3>
           <p>{order.delivery}</p>
           <div className="row-wrap">

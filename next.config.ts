@@ -22,6 +22,12 @@ const config: NextConfig = {
         source: '/:path*',
         headers: [
           { key: 'Referrer-Policy', value: 'same-origin' },
+          {
+            key: 'Content-Security-Policy',
+            value:
+              "object-src 'none'; base-uri 'self'; form-action 'self' https://api.razorpay.com https://checkout.razorpay.com" +
+              (process.env.VERCEL_ENV === 'production' ? "; frame-ancestors 'self'" : ''),
+          },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
         ],

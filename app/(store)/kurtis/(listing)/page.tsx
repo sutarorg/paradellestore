@@ -5,9 +5,9 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { CollectionControls, Retry } from '@/components/discovery';
 import { ArrowLink, Bloom, Crumbs, Eyebrow } from '@/components/ui';
 import { ProductCard } from '@/components/product-card';
-import { getCatalogue } from '@/lib/gateway';
+import { getListing } from '@/lib/gateway';
 import { categories } from '@/lib/content';
-import { discover, getFacets, parseQuery, queryHref, type Params } from '@/lib/shop';
+import { parseQuery, queryHref, type Params } from '@/lib/shop';
 import { pageMeta } from '@/lib/seo';
 function titleFor(q: ReturnType<typeof parseQuery>) {
   return q.q
@@ -21,8 +21,8 @@ function titleFor(q: ReturnType<typeof parseQuery>) {
 export async function generateMetadata({ searchParams }: { searchParams: Promise<Params> }) {
   const q = parseQuery(await searchParams);
   const base = parseQuery({ category: q.category, edit: q.edit, page: String(q.page) });
-  const { products } = await getCatalogue();
-  const canonical = queryHref({ ...base, page: discover(products, base).page });
+  const listing = await getListing({ category: base.category, edit: base.edit, page: String(base.page) });
+  const canonical = queryHref({ ...base, page: listing.page });
   return pageMeta(
     `${titleFor(q)} for Women`,
     'Explore women’s Kurtis by fabric, size, colour and silhouette. Find cotton, rayon, straight and Anarkali styles in the Paradelle collection.',
@@ -31,9 +31,9 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   );
 }
 export default async function Collection({ searchParams }: { searchParams: Promise<Params> }) {
-  const [raw, { products, unavailable }] = await Promise.all([searchParams, getCatalogue()]);
+  const raw = await searchParams;
   const q = parseQuery(raw);
-  const { items, total, page, pages } = discover(products, q);
+  const { items, total, page, pages, options, unavailable } = await getListing(raw);
   const title = titleFor(q);
   const filtered = !!(
     q.q ||
@@ -54,7 +54,7 @@ export default async function Collection({ searchParams }: { searchParams: Promi
         <h1>{title}</h1>
         <p>{q.q ? `Searching for “${q.q}”` : 'Timeless styles, for every mood and moment.'}</p>
       </header>
-      <CollectionControls q={q} options={getFacets(products)} hasSort={!!raw.sort} />
+      <CollectionControls q={q} options={options} hasSort={!!raw.sort} />
       <div className="result-caption" role="status">
         {unavailable ? 'Collection unavailable' : `${total} ${total === 1 ? 'product' : 'products'}`}
         {pages > 1 && (

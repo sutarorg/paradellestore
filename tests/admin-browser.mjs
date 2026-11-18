@@ -309,6 +309,10 @@ try {
   await alert('Check the fields');
   await section('Pricing defaults');
   await label('Sourcing cost (₹)').fill('1');
+  await section('Delivery coverage');
+  await page.getByLabel(/Serviceable Indian PIN codes/).fill('000000');
+  await btn('Save delivery coverage').click();
+  await alert('Check the fields');
   await section('Social links');
   await label('Instagram URL').fill('not-https');
   await btn('Save social links').click();
@@ -327,7 +331,7 @@ try {
   await section('Admin profile');
   await expect(label('Display name')).toBeVisible();
   done(
-    'All seven settings sections, validation, editable policy blocks, confirmation and unavailable-write handling',
+    'All eight settings sections, validation, editable policy blocks, confirmation and unavailable-write handling',
   );
   for (const [kind, status, sort] of [
     ['orders', 'ordered-on-meesho', 'value-desc'],
@@ -372,6 +376,7 @@ try {
     'Store identity',
     'Contact details',
     'Pricing defaults',
+    'Delivery coverage',
     'Social links',
     'Store policies',
     'SEO defaults',
@@ -380,7 +385,7 @@ try {
     await section(k);
     await layout();
   }
-  done('Mobile eight-stage selector and seven settings layouts at 360px');
+  done('Mobile eight-stage selector and eight settings layouts at 360px');
   assert.equal(
     await page.evaluate(() =>
       [...Object.keys(localStorage), ...Object.keys(sessionStorage)].some(

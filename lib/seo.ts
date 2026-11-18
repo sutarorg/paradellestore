@@ -12,7 +12,10 @@ export function pageMeta(
     title: `${title} | PARADELLE`,
     description,
     alternates: { canonical: path },
-    robots: noindex ? { index: false, follow: false } : { index: true, follow: true },
+    robots:
+      noindex || process.env.VERCEL_ENV === 'preview'
+        ? { index: false, follow: false }
+        : { index: true, follow: true },
     openGraph: {
       type: 'website',
       siteName: 'PARADELLE',

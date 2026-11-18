@@ -87,7 +87,7 @@ export function TrackForm() {
         {results &&
           (!results.length ? (
             <p className="form-message">
-              No matching orders were found. Check the number used at checkout and try again.
+              There is no recent status to show for these details. For help, contact the store.
             </p>
           ) : (
             results.map((r) => (

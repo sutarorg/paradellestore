@@ -57,7 +57,15 @@ function SearchPanel({ close }: { close: () => void }) {
     </Modal>
   );
 }
-export function Header({ announcement }: { announcement: string }) {
+export function Header({
+  announcement,
+  logo,
+  identityName = 'PARADELLE',
+}: {
+  announcement: string;
+  logo?: { src: string; alt: string } | null;
+  identityName?: string;
+}) {
   const pathname = usePathname();
   const [panel, setPanel] = useState<'search' | 'menu' | null>(null);
   const device = useDevice();
@@ -106,7 +114,18 @@ export function Header({ announcement }: { announcement: string }) {
             <Menu />
           </button>
           <Link href="/" aria-label="Paradelle home" className="wordmark">
-            PARADELLE
+            {logo ? (
+              <Image
+                src={logo.src}
+                alt={logo.alt}
+                width={132}
+                height={36}
+                unoptimized
+                style={{ objectFit: 'contain' }}
+              />
+            ) : (
+              identityName
+            )}
           </Link>
           <nav className="desktop-nav" aria-label="Main navigation">
             <details ref={shopRef} className="shop-disclosure">

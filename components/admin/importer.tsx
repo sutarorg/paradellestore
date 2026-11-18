@@ -73,6 +73,12 @@ const factFields = [
   ['pattern', 'Pattern'],
   ['colour', 'Colours'],
   ['sizes', 'Available sizes'],
+  ['category', 'Verified category'],
+  ['sleeve', 'Sleeves'],
+  ['neckline', 'Neckline'],
+  ['length', 'Length'],
+  ['occasion', 'Occasion'],
+  ['care', 'Care instructions'],
   ['measurements', 'Measurements'],
   ['description', 'Source description'],
   ['sourceUrl', 'Original source URL'],
@@ -362,7 +368,7 @@ export function ImportStudio({ initial, jobs, query, initialStep }: Props) {
           void run(
             { op: 'import.finish', ref: asRef(job), draft: preview, intent: 'publish' },
             'Import approved and product published.',
-            (r) => router.push(`/admin/products/${r.id}/edit`),
+            (r) => router.push(`/admin/products/${r.productId ?? r.id}/edit`),
           ),
       });
   };
@@ -740,6 +746,7 @@ export function ImportStudio({ initial, jobs, query, initialStep }: Props) {
                   </InfoBox>
                   <MediaEditor
                     purpose="reference"
+                    max={4}
                     photos={refs}
                     change={(v) => {
                       refsDirty.current = true;
@@ -748,6 +755,28 @@ export function ImportStudio({ initial, jobs, query, initialStep }: Props) {
                     rights={rights}
                     onRights={right}
                   />
+                  <Button
+                    secondary
+                    disabled={cmd.busy || !!job?.images.length || !rights}
+                    onClick={() => {
+                      if (requiredJob() && job)
+                        void run(
+                          {
+                            op: 'import.references',
+                            ref: asRef(job),
+                            referenceIds: refs.map((r) => r.id),
+                            rightsConfirmed: true,
+                          },
+                          'Licensed references saved.',
+                          () => {
+                            refsDirty.current = false;
+                            void refresh(job.id);
+                          },
+                        );
+                    }}
+                  >
+                    Save references without generating
+                  </Button>
                   <div>
                     <Button
                       busy={cmd.busy}
@@ -944,7 +973,7 @@ export function ImportStudio({ initial, jobs, query, initialStep }: Props) {
                           void run(
                             { op: 'import.finish', ref: asRef(job), draft: preview, intent: 'draft' },
                             'Product saved as draft.',
-                            (r) => router.push(`/admin/products/${r.id}/edit`),
+                            (r) => router.push(`/admin/products/${r.productId ?? r.id}/edit`),
                           );
                       }}
                     >

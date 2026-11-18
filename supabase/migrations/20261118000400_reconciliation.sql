@@ -1,0 +1,12 @@
+begin;
+alter table shop.checkout_intents add column checked_at timestamptz,add column provider_state text;
+create index reconcile_gateway on shop.checkout_intents(checked_at nulls first,created_at) where state='opened';
+alter table shop.work_queue add column input_manifest jsonb not null default '{}',add column output_manifest jsonb;
+alter table shop.store_settings add column shipping_gst_bps integer not null default 0 check(shipping_gst_bps between 0 and 10000);
+alter table shop.product_variants drop constraint product_variants_product_id_size_key;
+create unique index variant_option on shop.product_variants(product_id,lower(size),lower(coalesce(colour,'')));
+create index source_lookup on shop.product_import_jobs(source_product_id);
+create index address_customer on shop.addresses(customer_id,created_at desc);
+create index receipt_age on shop.command_receipts(created_at);
+create index work_refund on shop.work_queue(refund_id) where refund_id is not null;
+commit;

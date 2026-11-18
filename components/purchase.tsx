@@ -50,7 +50,7 @@ export function Purchase({
                 key={v.id}
                 data-size
                 aria-pressed={choice === v.id}
-                aria-label={`${v.size || 'One size'}${v.stock < 1 ? ', unavailable' : ''}`}
+                aria-label={`${[v.size || 'One size', v.colour].filter(Boolean).join(' · ')}${v.stock < 1 ? ', unavailable' : ''}`}
                 disabled={v.stock < 1}
                 className={`size-btn ${choice === v.id ? 'selected' : ''}`}
                 onClick={() => {
@@ -59,7 +59,7 @@ export function Purchase({
                   setNotice('');
                 }}
               >
-                {v.size || 'One size'}
+                {[v.size || 'One size', v.colour].filter(Boolean).join(' · ')}
               </button>
             ))}
           </div>
@@ -74,7 +74,7 @@ export function Purchase({
         <button type="button" disabled={sold} className="btn btn-dark buy-btn" onClick={add}>
           <ShoppingBag size={17} />
           {sold ? 'Out of stock' : 'Add to bag'}
-          {!sold && <span>— {money(p.pricePaise)}</span>}
+          {!sold && <span>— {money(chosen?.pricePaise ?? p.pricePaise)}</span>}
         </button>
       </div>
       {added && (

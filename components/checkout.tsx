@@ -2,6 +2,9 @@
 import { useState, useRef } from 'react';
 import Link from 'next/link';
 import { ArrowRight, LockKeyhole, ShoppingBag } from 'lucide-react';
+import { regions } from '@/lib/india';
+import { measure } from '@/lib/measurement';
+import { openCheckout } from '@/lib/standard-checkout';
 import { getQuote, startPayment } from '@/lib/actions';
 import type { Address, Quote, Settings } from '@/lib/contracts';
 import { rememberCheckout, saveAddress, toast, useDevice, useReady } from '@/lib/device';
@@ -62,6 +65,7 @@ function CheckoutForm({ settings }: { settings: CheckoutSettings }) {
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState('');
   const quotePanel = useRef<HTMLDivElement>(null);
+  const attempt = useRef<string | null>(null);
   const saved = d.address?.value;
   const [shippingAddress, setShippingAddress] = useState<Address | null>(null);
   const pay = async () => {
@@ -81,7 +85,15 @@ function CheckoutForm({ settings }: { settings: CheckoutSettings }) {
         return;
       }
       await rememberCheckout(quote.id, fingerprint(d.cart));
-      window.location.assign(r.value.paymentUrl);
+      setFeedback(
+        await openCheckout(r.value, () =>
+          measure(
+            'add_payment_info',
+            d.cart.map((l) => ({ item_id: l.variantId, quantity: l.quantity })),
+            quote.totalPaise / 100,
+          ),
+        ),
+      );
     } catch {
       setFeedback('We couldn’t open payment. Please try again.');
     } finally {
@@ -93,6 +105,7 @@ function CheckoutForm({ settings }: { settings: CheckoutSettings }) {
       <form
         className="checkout-form stack-form"
         onChange={() => {
+          attempt.current = null;
           setQuote(null);
           setFeedback('');
         }}
@@ -117,11 +130,14 @@ function CheckoutForm({ settings }: { settings: CheckoutSettings }) {
           setBusy(true);
           setFeedback('');
           try {
+            attempt.current ??= crypto.randomUUID();
             const r = await getQuote(
               d.cart,
               a,
               fields.get('terms') === 'on',
               String(fields.get('email') ?? '').trim() || undefined,
+              String(fields.get('coupon') ?? '').trim() || undefined,
+              attempt.current,
             );
             if (!r.ok) {
               setFeedback(r.message);
@@ -129,6 +145,11 @@ function CheckoutForm({ settings }: { settings: CheckoutSettings }) {
             }
             setShippingAddress(a);
             setQuote(r.value);
+            measure(
+              'begin_checkout',
+              d.cart.map((l) => ({ item_id: l.variantId, quantity: l.quantity })),
+              r.value.totalPaise / 100,
+            );
             saveAddress(save ? a : null);
             requestAnimationFrame(() => quotePanel.current?.focus());
           } catch {
@@ -196,6 +217,7 @@ function CheckoutForm({ settings }: { settings: CheckoutSettings }) {
             <label>
               State / union territory
               <input
+                list="checkout-regions"
                 name="state"
                 autoComplete="address-level1"
                 required
@@ -217,6 +239,11 @@ function CheckoutForm({ settings }: { settings: CheckoutSettings }) {
               defaultValue={saved?.pin}
             />
           </label>
+          <datalist id="checkout-regions">
+            {regions.map((s) => (
+              <option key={s} value={s} />
+            ))}
+          </datalist>
           <label className="check-label">
             <input
               type="checkbox"
@@ -241,6 +268,10 @@ function CheckoutForm({ settings }: { settings: CheckoutSettings }) {
             </button>
           )}
         </fieldset>
+        <label>
+          Coupon (optional)
+          <input name="coupon" maxLength={32} autoComplete="off" />
+        </label>
         <section className="payment-note">
           <LockKeyhole size={20} />
           <div>
@@ -297,6 +328,12 @@ function CheckoutForm({ settings }: { settings: CheckoutSettings }) {
                 <dd>−{money(quote.discountPaise)}</dd>
               </div>
             )}
+            {quote.taxPaise != null && (
+              <div>
+                <dt>GST included</dt>
+                <dd>{money(quote.taxPaise)}</dd>
+              </div>
+            )}
             <div className="total">
               <dt>Payable total</dt>
               <dd>{money(quote.totalPaise)}</dd>
@@ -310,6 +347,11 @@ function CheckoutForm({ settings }: { settings: CheckoutSettings }) {
             {busy ? 'Opening payment…' : `Pay ${money(quote.totalPaise)}`}
           </button>
         </div>
+      )}
+      {feedback && (
+        <Link className="underlink" href="/order-success">
+          Check confirmed payment on this device
+        </Link>
       )}
       {feedback && (
         <p className="field-error" role="alert">

@@ -1,0 +1,9 @@
+.git/
+.cache/
+.env*
+docs/
+test-results/
+tests/
+supabase/
+backups/
+Elegant Paradelle Kurtis UI Presentation.png

@@ -1,8 +1,17 @@
 import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
 import { categories, categoryHref, policyLinks } from '@/lib/content';
+import { PrivacyChoices } from './privacy-choices';
 import { Bloom } from './ui';
-export function Footer() {
+export function Footer({
+  social = {},
+  ga,
+  meta,
+}: {
+  social?: Record<string, string>;
+  ga?: string;
+  meta?: string;
+}) {
   return (
     <footer className="site-footer">
       <div className="frame">
@@ -13,6 +22,11 @@ export function Footer() {
             </Link>
             <p>Timeless Kurtis for every you.</p>
             <Bloom size={32} />
+            {Object.entries(social).map(([k, url]) => (
+              <a key={k} href={url} rel="noopener noreferrer" target="_blank">
+                {k[0].toUpperCase() + k.slice(1)}
+              </a>
+            ))}
           </div>
           <div>
             <h2>Discover</h2>
@@ -43,6 +57,7 @@ export function Footer() {
         <div className="footer-base">
           <span>© {new Date().getFullYear()} PARADELLE</span>
           <span>India · INR ₹</span>
+          <PrivacyChoices ga={ga} meta={meta} />
           <a href="#top">
             Back to top <ArrowUpRight size={14} />
           </a>

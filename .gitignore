@@ -10,3 +10,7 @@ test-results/
 *.log
 .auth/
 playwright/.auth/
+.vercel/
+supabase/.branches/
+supabase/.temp/
+backups/
