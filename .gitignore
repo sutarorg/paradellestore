@@ -1,0 +1,12 @@
+node_modules/
+.next/
+.cache/
+.arena/
+.env*
+!.env.example
+coverage/
+test-results/
+*.tsbuildinfo
+*.log
+.auth/
+playwright/.auth/

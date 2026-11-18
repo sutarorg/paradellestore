@@ -1,0 +1,42 @@
+{
+  "routeChecks": 39,
+  "layoutChecks": 74,
+  "axeScans": 52,
+  "images": 11,
+  "groups": [
+    "Sidebar, keyboard page finder, empty search, tablet drawer navigation, dismissal and focus restoration",
+    "Private sign-in and recovery fail closed; password visibility and no session cookie",
+    "Catalogue search, status and category filters, sorting, shareable query and clear",
+    "Draft and publication validation, reversible size editor, local photo preview, rights gate and blocked upload",
+    "Live pricing arithmetic in rupees, recommendation applied explicitly, preview and discard confirmation",
+    "All eight import stages: canonical URL, consent, manual facts, provenance, local copy, five empty slots, review rights, pricing, guarded approval, tracker filters",
+    "All seven settings sections, validation, editable policy blocks, confirmation and unavailable-write handling",
+    "Customer search stays in a private request body, never the URL",
+    "Operational filters and sorting, reporting range and grouping; no chart rendered without real data",
+    "Mobile eight-stage selector and seven settings layouts at 360px",
+    "Private paths excluded from sitemap, crawler policy and no private browser storage"
+  ],
+  "unexpected": [],
+  "violations": [],
+  "cancelledRequests": 485,
+  "screenshots": [
+    "desktop-overview",
+    "desktop-login",
+    "desktop-products",
+    "desktop-products-new",
+    "desktop-products-no-record-edit",
+    "desktop-importer",
+    "desktop-orders",
+    "desktop-orders-no-record",
+    "desktop-inventory",
+    "desktop-customers",
+    "desktop-reviews",
+    "desktop-analytics",
+    "desktop-settings",
+    "tablet-overview",
+    "tablet-importer",
+    "mobile-overview",
+    "mobile-importer",
+    "desktop-five-frames"
+  ]
+}
