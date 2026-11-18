@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "regions": ["bom1"],
+  "crons": [{ "path": "/api/maintenance", "schedule": "* * * * *" }],
+  "redirects": [{"source":"/:path*","has":[{"type":"host","value":"www.paradelle.store"}],"destination":"https://paradelle.store/:path*","permanent":true}]
+}

@@ -1,0 +1,27 @@
+name: Verify commerce application
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - run: npm ci
+      - run: npm run lint && npm run typecheck && npm test
+      - run: npm audit --audit-level=high
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:commerce:browser
+      - name: Empty-state storefront and studio
+        run: |
+          npm run start -- --port 3000 &
+          SERVER=$!
+          trap 'kill "$SERVER"' EXIT
+          curl --retry 12 --retry-connrefused --retry-delay 1 -fsS http://127.0.0.1:3000/robots.txt >/dev/null
+          npm run test:browser && npm run test:admin

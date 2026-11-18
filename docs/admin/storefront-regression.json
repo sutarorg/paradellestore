@@ -1,0 +1,33 @@
+{
+  "routeChecks": 45,
+  "layoutChecks": 69,
+  "imageChecks": 135,
+  "structuredData": 54,
+  "links": 49,
+  "accessibilityScans": 49,
+  "interactions": [
+    "Internal destinations, fragment targets, sitemap, robots and icon",
+    "Manual campaign arrows, direct selection and slide content",
+    "Desktop shop menu and category destination",
+    "Search query, accessible dialog, Escape and restored focus",
+    "Filter sheet, price validation, availability, apply/remove/reset",
+    "Sort URLs, persistence across refresh and remembered preference",
+    "Mobile drawer, wishlist and bottom navigation",
+    "Shared product/lookbook gallery: thumbnails, fullscreen, arrows, swipe and focus",
+    "Tracking validation, service-unavailable state and no stored mobile number",
+    "Unverified callbacks cannot show confirmation",
+    "Stale references, bag count, quantity, refresh, removal and checkout guard",
+    "Privacy control: non-destructive default, cancel and forget device",
+    "Corrupt and denied browser storage recovery",
+    "Support accordions and care navigation"
+  ],
+  "expected404": 7,
+  "cancelledNavigationRequests": 668,
+  "errors": [],
+  "violations": [],
+  "localPerformance": {
+    "lcp": 100,
+    "cls": 0,
+    "ttfbMs": 16
+  }
+}

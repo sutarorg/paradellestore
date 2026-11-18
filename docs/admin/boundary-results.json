@@ -1,0 +1,15 @@
+{
+  "checks": [
+    "A direct protected URL without a cookie reaches login without reading the private record",
+    "A valid-shaped provider response without an admin role cannot create a session",
+    "A verified admin receives a Secure, HttpOnly, Strict, admin-path cookie, not a browser-visible token",
+    "Verified non-PII scope cannot read customer rows or issue a private search upstream",
+    "An authorised empty page is distinct from disconnected and forbidden states",
+    "Upstream outage and malformed data fail closed; no raw error leaks and Retry re-reads",
+    "Authorised, missing product shows a distinct not-found state",
+    "Commands require explicit revisions/idempotency and a typed receipt; 409 and ambiguous 200 are not success",
+    "Revoking a session on an already-mounted editor blocks the next Server Action before mutation",
+    "Sign-out expires the browser session and requests server-side revocation"
+  ],
+  "storedMerchantRecords": 0
+}

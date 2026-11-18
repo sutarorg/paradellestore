@@ -1,0 +1,4392 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "PARADELLE private merchant service",
+    "version": "1.0.0",
+    "description": "Stage 3 provider contract, not a deployed endpoint. See CONTRACT.md for per-operation authorisation, conditional fields, monetary semantics and transaction rules."
+  },
+  "servers": [
+    {
+      "url": "/api/private/v1",
+      "description": "Proposed route prefix inside the same application. The server adapter uses PARADELLE_ADMIN_API_URL."
+    }
+  ],
+  "security": [
+    {
+      "StaffSession": []
+    }
+  ],
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "summary": "Admin sign-in",
+        "x-admin-permissions": [],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Login"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validated response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuedSession"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    },
+    "/auth/recover": {
+      "post": {
+        "summary": "Enumeration-safe recovery",
+        "x-admin-permissions": [],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Recovery"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Request accepted"
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    },
+    "/auth/session": {
+      "get": {
+        "summary": "Verify role and permissions",
+        "x-admin-permissions": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Validated private document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Viewer"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "Revoke this session",
+        "x-admin-permissions": [],
+        "responses": {
+          "204": {
+            "description": "Completed"
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    },
+    "/dashboard": {
+      "get": {
+        "summary": "Operational and financial overview",
+        "x-admin-permissions": [
+          "analytics",
+          "orders",
+          "pii"
+        ],
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "enum": [
+                7,
+                30,
+                90
+              ],
+              "default": 30
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Validated private document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dashboard"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    },
+    "/analytics": {
+      "get": {
+        "summary": "Financial aggregates",
+        "x-admin-permissions": [
+          "analytics"
+        ],
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "enum": [
+                7,
+                30,
+                90
+              ],
+              "default": 30
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Validated private document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Analytics"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    },
+    "/products": {
+      "get": {
+        "summary": "Page through products",
+        "x-admin-permissions": [
+          "catalogue"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 999999,
+              "default": 1
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "updated-desc",
+                "title-asc",
+                "price-asc",
+                "price-desc"
+              ],
+              "default": "updated-desc"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "published",
+                "archived"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 150
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "anarkali",
+                "rayon",
+                "cotton",
+                "straight",
+                "long",
+                "other"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Validated private document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductRowPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    },
+    "/orders": {
+      "get": {
+        "summary": "Page through orders",
+        "x-admin-permissions": [
+          "orders",
+          "pii"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 999999,
+              "default": 1
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "oldest",
+                "value-desc"
+              ],
+              "default": "newest"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "paid",
+                "pending-purchase",
+                "ordered-on-meesho",
+                "shipped",
+                "delivered",
+                "cancelled",
+                "refund-pending",
+                "refunded"
+              ]
+            }
+          },
+          {
+            "name": "customerId",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Validated private document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderRowPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    },
+    "/customers": {
+      "get": {
+        "summary": "Page through customers",
+        "x-admin-permissions": [
+          "customers",
+          "pii"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 999999,
+              "default": 1
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "recent",
+                "name-asc",
+                "spend-desc"
+              ],
+              "default": "recent"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Validated private document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    },
+    "/inventory": {
+      "get": {
+        "summary": "Page through inventory",
+        "x-admin-permissions": [
+          "inventory"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 999999,
+              "default": 1
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "stock-asc",
+                "stock-desc",
+                "title-asc"
+              ],
+              "default": "stock-asc"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "low-stock",
+                "out-of-stock",
+                "available",
+                "disabled"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 150
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Validated private document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    },
+    "/reviews": {
+      "get": {
+        "summary": "Page through reviews",
+        "x-admin-permissions": [
+          "reviews"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 999999,
+              "default": 1
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "oldest",
+                "rating-desc"
+              ],
+              "default": "newest"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "published",
+                "unpublished",
+                "rejected",
+                "authorised-feed",
+                "paradelle"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 150
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Validated private document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    },
+    "/imports": {
+      "get": {
+        "summary": "Page through imports",
+        "x-admin-permissions": [
+          "imports"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 999999,
+              "default": 1
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "updated-desc",
+                "oldest"
+              ],
+              "default": "updated-desc"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "in-progress",
+                "pending-review",
+                "failed",
+                "published",
+                "cancelled"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 150
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Validated private document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobRowPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    },
+    "/products/{id}": {
+      "get": {
+        "summary": "Read product and editable draft",
+        "x-admin-permissions": [
+          "catalogue"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Validated private document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    },
+    "/orders/{id}": {
+      "get": {
+        "summary": "Read protected order detail and history",
+        "x-admin-permissions": [
+          "orders",
+          "pii"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Validated private document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    },
+    "/imports/{id}": {
+      "get": {
+        "summary": "Poll/resume import",
+        "x-admin-permissions": [
+          "imports"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Validated private document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    },
+    "/settings": {
+      "get": {
+        "summary": "Single-store settings",
+        "x-admin-permissions": [
+          "settings"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Validated private document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsRecord"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    },
+    "/pricing/defaults": {
+      "get": {
+        "summary": "Initial assumptions for new listings",
+        "x-admin-permissions": [
+          "catalogue"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Validated private document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Costs"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    },
+    "/orders/search": {
+      "post": {
+        "summary": "Private order search",
+        "x-admin-permissions": [
+          "orders",
+          "pii"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrivateSearch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validated response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderRowPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    },
+    "/customers/search": {
+      "post": {
+        "summary": "Private customer search",
+        "x-admin-permissions": [
+          "customers",
+          "pii"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrivateSearch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validated response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    },
+    "/inventory/history": {
+      "get": {
+        "summary": "Newest adjustments first",
+        "x-admin-permissions": [
+          "inventory"
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "const": 25
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Balanced adjustments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "maxItems": 25,
+                  "items": {
+                    "$ref": "#/components/schemas/Adjustment"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    },
+    "/commands": {
+      "post": {
+        "summary": "Validate permission, revision and idempotency before executing a command",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Applied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Receipt"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Receipt"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Queued — not yet completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Receipt"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "404": {
+            "description": "Record missing"
+          },
+          "409": {
+            "description": "Revision conflict"
+          },
+          "422": {
+            "description": "Business constraint, rights or transition rejected"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    },
+    "/media": {
+      "post": {
+        "summary": "Rights-cleared private asset; permission is determined by purpose",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "purpose": {
+                    "enum": [
+                      "product",
+                      "reference",
+                      "logo"
+                    ]
+                  },
+                  "rights": {
+                    "const": "confirmed"
+                  },
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "JPEG, PNG or WebP; maximum 4 MiB"
+                  }
+                },
+                "required": [
+                  "purpose",
+                  "rights",
+                  "file"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Validated private media descriptor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Photo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "422": {
+            "description": "Invalid media"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "StaffSession": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Server-to-service opaque admin session. Never supplied by browser JS."
+      }
+    },
+    "schemas": {
+      "Key": {
+        "type": "string",
+        "pattern": "^[\\w-]{1,128}$"
+      },
+      "Viewer": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "role": {
+            "type": "string",
+            "const": "admin"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "catalogue",
+                "imports",
+                "orders",
+                "inventory",
+                "customers",
+                "pii",
+                "reviews",
+                "analytics",
+                "settings"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "role",
+          "permissions"
+        ],
+        "additionalProperties": false
+      },
+      "Reference": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "id",
+          "revision"
+        ],
+        "additionalProperties": false
+      },
+      "Costs": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "extras": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "packaging": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "shipping": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "feeFixed": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reserve": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "discountAllowance": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "feeRate": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9999
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "margin": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9999
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tax": {
+            "type": "string",
+            "enum": [
+              "unspecified",
+              "none",
+              "inclusive"
+            ]
+          },
+          "gst": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "endings": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "source",
+          "extras",
+          "packaging",
+          "shipping",
+          "feeFixed",
+          "reserve",
+          "feeRate",
+          "margin",
+          "tax",
+          "gst",
+          "endings"
+        ],
+        "additionalProperties": false
+      },
+      "Photo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "src": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "alt": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "width": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "height": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "id",
+          "src",
+          "alt",
+          "width",
+          "height"
+        ],
+        "additionalProperties": false
+      },
+      "Variant": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "size": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "sku": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "stock": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "colour": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "priceOverride": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "size",
+          "sku",
+          "stock",
+          "enabled"
+        ],
+        "additionalProperties": false
+      },
+      "Draft": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "slug": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "sku": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "shortDescription": {
+            "type": "string",
+            "maxLength": 12000
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 12000
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "anarkali",
+                  "rayon",
+                  "cotton",
+                  "straight",
+                  "long",
+                  "other"
+                ]
+              },
+              {
+                "type": "string",
+                "const": ""
+              }
+            ]
+          },
+          "tags": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "attrs": {
+            "type": "object",
+            "properties": {
+              "fabric": {
+                "type": "string",
+                "maxLength": 240
+              },
+              "pattern": {
+                "type": "string",
+                "maxLength": 240
+              },
+              "sleeve": {
+                "type": "string",
+                "maxLength": 240
+              },
+              "neckline": {
+                "type": "string",
+                "maxLength": 240
+              },
+              "length": {
+                "type": "string",
+                "maxLength": 240
+              },
+              "occasion": {
+                "type": "string",
+                "maxLength": 240
+              },
+              "colour": {
+                "type": "string",
+                "maxLength": 240
+              },
+              "care": {
+                "type": "string",
+                "maxLength": 12000
+              },
+              "measurements": {
+                "type": "string",
+                "maxLength": 12000
+              },
+              "specifications": {
+                "type": "string",
+                "maxLength": 12000
+              }
+            },
+            "required": [
+              "fabric",
+              "pattern",
+              "sleeve",
+              "neckline",
+              "length",
+              "occasion",
+              "colour",
+              "care",
+              "measurements",
+              "specifications"
+            ],
+            "additionalProperties": false
+          },
+          "seoTitle": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "seoDescription": {
+            "type": "string",
+            "maxLength": 12000
+          },
+          "costs": {
+            "$ref": "#/components/schemas/Costs"
+          },
+          "pricePaise": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "variants": {
+            "maxItems": 40,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Variant"
+            }
+          },
+          "images": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Photo"
+            }
+          },
+          "sourceUrl": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "sourcePrice": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "compareAt": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mrpVerified": {
+            "type": "boolean"
+          },
+          "featured": {
+            "type": "boolean"
+          },
+          "bestseller": {
+            "type": "boolean"
+          },
+          "factsVerified": {
+            "type": "boolean"
+          },
+          "imageRights": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "title",
+          "slug",
+          "sku",
+          "shortDescription",
+          "description",
+          "category",
+          "tags",
+          "attrs",
+          "seoTitle",
+          "seoDescription",
+          "costs",
+          "pricePaise",
+          "variants",
+          "images",
+          "factsVerified",
+          "imageRights"
+        ],
+        "additionalProperties": false
+      },
+      "Product": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "published",
+              "archived"
+            ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          },
+          "draft": {
+            "$ref": "#/components/schemas/Draft"
+          }
+        },
+        "required": [
+          "id",
+          "revision",
+          "status",
+          "updatedAt",
+          "draft"
+        ],
+        "additionalProperties": false
+      },
+      "ProductRow": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "slug": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "sku": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "published",
+              "archived"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "pricePaise": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "thumbnail": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sizes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 240
+            }
+          },
+          "stock": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          }
+        },
+        "required": [
+          "id",
+          "revision",
+          "title",
+          "slug",
+          "sku",
+          "status",
+          "category",
+          "pricePaise",
+          "thumbnail",
+          "sizes",
+          "stock",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "OrderLine": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "image": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "size": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "quantity": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "unitPaise": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "sourceUrl": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 240
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "image",
+          "size",
+          "quantity",
+          "unitPaise"
+        ],
+        "additionalProperties": false
+      },
+      "OrderRow": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "reference": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "customer": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "mobile": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderLine"
+            }
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          },
+          "totalPaise": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "payment": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "paid",
+              "failed",
+              "refund-pending",
+              "partially-refunded",
+              "refunded"
+            ]
+          },
+          "fulfilment": {
+            "type": "string",
+            "enum": [
+              "pending-purchase",
+              "ordered-on-meesho",
+              "shipped",
+              "delivered",
+              "cancelled"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "revision",
+          "reference",
+          "customer",
+          "mobile",
+          "items",
+          "date",
+          "totalPaise",
+          "payment",
+          "fulfilment"
+        ],
+        "additionalProperties": false
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "reference": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "customer": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "mobile": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderLine"
+            }
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          },
+          "totalPaise": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "payment": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "paid",
+              "failed",
+              "refund-pending",
+              "partially-refunded",
+              "refunded"
+            ]
+          },
+          "fulfilment": {
+            "type": "string",
+            "enum": [
+              "pending-purchase",
+              "ordered-on-meesho",
+              "shipped",
+              "delivered",
+              "cancelled"
+            ]
+          },
+          "address": {
+            "type": "string",
+            "maxLength": 12000
+          },
+          "subtotalPaise": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "discountPaise": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "paidPaise": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "refundablePaise": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "sourcingPaise": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "contributionPaise": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "paymentReference": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "paymentAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "manual": {
+            "$ref": "#/components/schemas/ManualFulfilment"
+          },
+          "exception": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 240
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "refunds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "$ref": "#/components/schemas/Key"
+                },
+                "amount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "requested",
+                    "pending",
+                    "processed",
+                    "failed"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                }
+              },
+              "required": [
+                "id",
+                "amount",
+                "status",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Activity"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "revision",
+          "reference",
+          "customer",
+          "mobile",
+          "items",
+          "date",
+          "totalPaise",
+          "payment",
+          "fulfilment",
+          "address",
+          "subtotalPaise",
+          "discountPaise",
+          "paidPaise",
+          "refundablePaise",
+          "sourcingPaise",
+          "contributionPaise",
+          "paymentReference",
+          "paymentAt",
+          "manual",
+          "history"
+        ],
+        "additionalProperties": false
+      },
+      "ManualFulfilment": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending-purchase",
+              "ordered-on-meesho",
+              "shipped",
+              "delivered",
+              "cancelled"
+            ]
+          },
+          "sourceUrl": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "meeshoRef": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "costPaise": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "purchaseDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+              },
+              {
+                "type": "string",
+                "const": ""
+              }
+            ]
+          },
+          "carrier": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "tracking": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "trackingUrl": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 12000
+          }
+        },
+        "required": [
+          "status",
+          "sourceUrl",
+          "meeshoRef",
+          "costPaise",
+          "purchaseDate",
+          "carrier",
+          "tracking",
+          "trackingUrl",
+          "notes"
+        ],
+        "additionalProperties": false
+      },
+      "Adjustment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "variantId": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "productId": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "product": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "size": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "sku": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "before": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "delta": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "after": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          },
+          "actor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          }
+        },
+        "required": [
+          "id",
+          "variantId",
+          "productId",
+          "product",
+          "size",
+          "sku",
+          "before",
+          "delta",
+          "after",
+          "reason",
+          "at",
+          "actor"
+        ],
+        "additionalProperties": false
+      },
+      "Customer": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "mobile": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "orders": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "spendPaise": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "lastOrder": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "mobile",
+          "orders",
+          "spendPaise",
+          "lastOrder"
+        ],
+        "additionalProperties": false
+      },
+      "Review": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "productId": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "productTitle": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 12000
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 5
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "paradelle",
+              "authorised-feed"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "permission": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "granted",
+              "denied"
+            ]
+          },
+          "verifiedPurchase": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "published",
+              "unpublished",
+              "rejected"
+            ]
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          }
+        },
+        "required": [
+          "id",
+          "revision",
+          "productId",
+          "productTitle",
+          "body",
+          "rating",
+          "origin",
+          "source",
+          "permission",
+          "verifiedPurchase",
+          "status",
+          "at"
+        ],
+        "additionalProperties": false
+      },
+      "Activity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "detail": {
+            "type": "string",
+            "maxLength": 12000
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          },
+          "actor": {
+            "type": "string",
+            "maxLength": 240
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "detail",
+          "at",
+          "actor"
+        ],
+        "additionalProperties": false
+      },
+      "Fact": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 12000
+          },
+          "verified": {
+            "type": "boolean"
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "source",
+              "manual"
+            ]
+          }
+        },
+        "required": [
+          "field",
+          "value",
+          "verified",
+          "origin"
+        ],
+        "additionalProperties": false
+      },
+      "ImageSlot": {
+        "type": "object",
+        "properties": {
+          "slot": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "not-started",
+              "queued",
+              "running",
+              "ready",
+              "failed",
+              "restricted",
+              "cancelled"
+            ]
+          },
+          "photo": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Photo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "approved": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string",
+            "maxLength": 12000
+          }
+        },
+        "required": [
+          "slot",
+          "status",
+          "photo",
+          "approved",
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "SourceReview": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 12000
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 5
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "permission": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "granted",
+              "denied"
+            ]
+          },
+          "approved": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "body",
+          "rating",
+          "source",
+          "permission",
+          "approved"
+        ],
+        "additionalProperties": false
+      },
+      "JobStages": {
+        "type": "object",
+        "properties": {
+          "extraction": {
+            "type": "string",
+            "enum": [
+              "not-started",
+              "queued",
+              "running",
+              "ready",
+              "failed",
+              "restricted",
+              "cancelled"
+            ]
+          },
+          "content": {
+            "type": "string",
+            "enum": [
+              "not-started",
+              "queued",
+              "running",
+              "ready",
+              "failed",
+              "restricted",
+              "cancelled"
+            ]
+          },
+          "images": {
+            "type": "string",
+            "enum": [
+              "not-started",
+              "queued",
+              "running",
+              "ready",
+              "failed",
+              "restricted",
+              "cancelled"
+            ]
+          },
+          "reviews": {
+            "type": "string",
+            "enum": [
+              "not-started",
+              "queued",
+              "running",
+              "ready",
+              "failed",
+              "restricted",
+              "cancelled"
+            ]
+          },
+          "approval": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "published",
+              "cancelled"
+            ]
+          }
+        },
+        "required": [
+          "extraction",
+          "content",
+          "images",
+          "reviews",
+          "approval"
+        ],
+        "additionalProperties": false
+      },
+      "JobRow": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "sourceUrl": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "stages": {
+            "$ref": "#/components/schemas/JobStages"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          },
+          "error": {
+            "type": "string",
+            "maxLength": 12000
+          }
+        },
+        "required": [
+          "id",
+          "revision",
+          "sourceUrl",
+          "title",
+          "stages",
+          "updatedAt",
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "Job": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "sourceUrl": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "stages": {
+            "$ref": "#/components/schemas/JobStages"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          },
+          "error": {
+            "type": "string",
+            "maxLength": 12000
+          },
+          "facts": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Fact"
+            }
+          },
+          "references": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Photo"
+            }
+          },
+          "suggestion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Draft"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "draft": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Draft"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "images": {
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImageSlot"
+            }
+          },
+          "reviews": {
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceReview"
+            }
+          },
+          "rightsConfirmed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "revision",
+          "sourceUrl",
+          "title",
+          "stages",
+          "updatedAt",
+          "error",
+          "facts",
+          "references",
+          "suggestion",
+          "draft",
+          "images",
+          "reviews",
+          "rightsConfirmed"
+        ],
+        "additionalProperties": false
+      },
+      "SalesDay": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "salesPaise": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "day",
+          "salesPaise"
+        ],
+        "additionalProperties": false
+      },
+      "Dashboard": {
+        "type": "object",
+        "properties": {
+          "summary": {
+            "type": "object",
+            "properties": {
+              "revenuePaise": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "paidOrders": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "pendingOrders": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "publishedProducts": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "lowStockProducts": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "importsPending": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "revenuePaise",
+              "paidOrders",
+              "pendingOrders",
+              "publishedProducts",
+              "lowStockProducts",
+              "importsPending"
+            ],
+            "additionalProperties": false
+          },
+          "sales": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesDay"
+            }
+          },
+          "orders": {
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "$ref": "#/components/schemas/Key"
+                },
+                "revision": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "reference": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 240
+                },
+                "customer": {
+                  "type": "string",
+                  "maxLength": 240
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderLine"
+                  }
+                },
+                "date": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "totalPaise": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "payment": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "paid",
+                    "failed",
+                    "refund-pending",
+                    "partially-refunded",
+                    "refunded"
+                  ]
+                },
+                "fulfilment": {
+                  "type": "string",
+                  "enum": [
+                    "pending-purchase",
+                    "ordered-on-meesho",
+                    "shipped",
+                    "delivered",
+                    "cancelled"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "revision",
+                "reference",
+                "customer",
+                "items",
+                "date",
+                "totalPaise",
+                "payment",
+                "fulfilment"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "activity": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Activity"
+            }
+          }
+        },
+        "required": [
+          "summary",
+          "sales",
+          "orders",
+          "activity"
+        ],
+        "additionalProperties": false
+      },
+      "Analytics": {
+        "type": "object",
+        "properties": {
+          "grossPaise": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "netPaise": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "orders": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "aovPaise": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "contributionPaise": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "returnBps": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "refundBps": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sales": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesDay"
+            }
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 240
+                },
+                "value": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "name",
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 240
+                },
+                "value": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "name",
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "statuses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 240
+                },
+                "value": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "name",
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "grossPaise",
+          "netPaise",
+          "orders",
+          "aovPaise",
+          "contributionPaise",
+          "returnBps",
+          "refundBps",
+          "sales",
+          "products",
+          "categories",
+          "statuses"
+        ],
+        "additionalProperties": false
+      },
+      "Settings": {
+        "type": "object",
+        "properties": {
+          "identity": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 240
+              },
+              "logo": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Photo"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "announcement": {
+                "type": "string",
+                "maxLength": 240
+              }
+            },
+            "required": [
+              "name",
+              "logo",
+              "announcement"
+            ],
+            "additionalProperties": false
+          },
+          "contact": {
+            "type": "object",
+            "properties": {
+              "email": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "email",
+                    "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  },
+                  {
+                    "type": "string",
+                    "const": ""
+                  }
+                ]
+              },
+              "phone": {
+                "type": "string",
+                "maxLength": 240
+              },
+              "businessName": {
+                "type": "string",
+                "maxLength": 240
+              },
+              "address": {
+                "type": "string",
+                "maxLength": 12000
+              },
+              "registration": {
+                "type": "string",
+                "maxLength": 240
+              }
+            },
+            "required": [
+              "email",
+              "phone",
+              "businessName",
+              "address",
+              "registration"
+            ],
+            "additionalProperties": false
+          },
+          "pricing": {
+            "$ref": "#/components/schemas/Costs"
+          },
+          "delivery": {
+            "type": "object",
+            "properties": {
+              "shipping": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "freeFrom": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "gst": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000
+              },
+              "pins": {
+                "maxItems": 10000,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[1-9]\\d{5}$"
+                }
+              }
+            },
+            "required": [
+              "shipping",
+              "freeFrom",
+              "gst",
+              "pins"
+            ],
+            "additionalProperties": false
+          },
+          "social": {
+            "type": "object",
+            "properties": {
+              "instagram": {
+                "type": "string",
+                "maxLength": 240
+              },
+              "facebook": {
+                "type": "string",
+                "maxLength": 240
+              },
+              "pinterest": {
+                "type": "string",
+                "maxLength": 240
+              }
+            },
+            "required": [
+              "instagram",
+              "facebook",
+              "pinterest"
+            ],
+            "additionalProperties": false
+          },
+          "policies": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 240
+                  },
+                  "body": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 12000
+                  }
+                },
+                "required": [
+                  "title",
+                  "body"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "seo": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "maxLength": 240
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 12000
+              }
+            },
+            "required": [
+              "title",
+              "description"
+            ],
+            "additionalProperties": false
+          },
+          "profile": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 240
+              },
+              "email": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "email",
+                    "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  },
+                  {
+                    "type": "string",
+                    "const": ""
+                  }
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "email"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "identity",
+          "contact",
+          "pricing",
+          "delivery",
+          "social",
+          "policies",
+          "seo",
+          "profile"
+        ],
+        "additionalProperties": false
+      },
+      "SettingsRecord": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "value": {
+            "$ref": "#/components/schemas/Settings"
+          }
+        },
+        "required": [
+          "revision",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      "Stock": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "productId": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "sku": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "size": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "stock": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "threshold": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          },
+          "productStock": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "id",
+          "revision",
+          "productId",
+          "title",
+          "sku",
+          "size",
+          "stock",
+          "threshold",
+          "enabled",
+          "updatedAt",
+          "productStock"
+        ],
+        "additionalProperties": false
+      },
+      "Command": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "product.save"
+              },
+              "ref": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Reference"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "draft": {
+                "$ref": "#/components/schemas/Draft"
+              },
+              "intent": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "publish",
+                  "update"
+                ]
+              }
+            },
+            "required": [
+              "op",
+              "ref",
+              "draft",
+              "intent"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "product.transition"
+              },
+              "refs": {
+                "minItems": 1,
+                "maxItems": 50,
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Reference"
+                }
+              },
+              "to": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "published",
+                  "archived"
+                ]
+              }
+            },
+            "required": [
+              "op",
+              "refs",
+              "to"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "product.delete"
+              },
+              "ref": {
+                "$ref": "#/components/schemas/Reference"
+              }
+            },
+            "required": [
+              "op",
+              "ref"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "product.duplicate"
+              },
+              "ref": {
+                "$ref": "#/components/schemas/Reference"
+              }
+            },
+            "required": [
+              "op",
+              "ref"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "stock.adjust"
+              },
+              "ref": {
+                "$ref": "#/components/schemas/Reference"
+              },
+              "delta": {
+                "type": "integer",
+                "minimum": -1000000,
+                "maximum": 1000000
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 500
+              }
+            },
+            "required": [
+              "op",
+              "ref",
+              "delta",
+              "reason"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "order.fulfil"
+              },
+              "ref": {
+                "$ref": "#/components/schemas/Reference"
+              },
+              "manual": {
+                "$ref": "#/components/schemas/ManualFulfilment"
+              }
+            },
+            "required": [
+              "op",
+              "ref",
+              "manual"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "order.refund"
+              },
+              "ref": {
+                "$ref": "#/components/schemas/Reference"
+              },
+              "amountPaise": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 500
+              }
+            },
+            "required": [
+              "op",
+              "ref",
+              "amountPaise",
+              "reason"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "order.check-refund"
+              },
+              "ref": {
+                "$ref": "#/components/schemas/Reference"
+              }
+            },
+            "required": [
+              "op",
+              "ref"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "review.moderate"
+              },
+              "ref": {
+                "$ref": "#/components/schemas/Reference"
+              },
+              "to": {
+                "type": "string",
+                "enum": [
+                  "published",
+                  "unpublished",
+                  "rejected"
+                ]
+              }
+            },
+            "required": [
+              "op",
+              "ref",
+              "to"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "settings.save"
+              },
+              "revision": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "section": {
+                "type": "string",
+                "enum": [
+                  "identity",
+                  "contact",
+                  "pricing",
+                  "delivery",
+                  "social",
+                  "policies",
+                  "seo",
+                  "profile"
+                ]
+              },
+              "value": {}
+            },
+            "required": [
+              "op",
+              "revision",
+              "section",
+              "value"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "import.start"
+              },
+              "url": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "method": {
+                "type": "string",
+                "enum": [
+                  "extract",
+                  "manual"
+                ]
+              },
+              "authorised": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "required": [
+              "op",
+              "url",
+              "method",
+              "authorised"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "import.facts"
+              },
+              "ref": {
+                "$ref": "#/components/schemas/Reference"
+              },
+              "facts": {
+                "minItems": 1,
+                "maxItems": 50,
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Fact"
+                }
+              }
+            },
+            "required": [
+              "op",
+              "ref",
+              "facts"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "import.content"
+              },
+              "ref": {
+                "$ref": "#/components/schemas/Reference"
+              }
+            },
+            "required": [
+              "op",
+              "ref"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "import.save-listing"
+              },
+              "ref": {
+                "$ref": "#/components/schemas/Reference"
+              },
+              "draft": {
+                "$ref": "#/components/schemas/Draft"
+              }
+            },
+            "required": [
+              "op",
+              "ref",
+              "draft"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "import.references"
+              },
+              "ref": {
+                "$ref": "#/components/schemas/Reference"
+              },
+              "referenceIds": {
+                "maxItems": 4,
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Key"
+                }
+              },
+              "rightsConfirmed": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "required": [
+              "op",
+              "ref",
+              "referenceIds",
+              "rightsConfirmed"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "import.images"
+              },
+              "ref": {
+                "$ref": "#/components/schemas/Reference"
+              },
+              "referenceIds": {
+                "minItems": 1,
+                "maxItems": 20,
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Key"
+                }
+              },
+              "rightsConfirmed": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "required": [
+              "op",
+              "ref",
+              "referenceIds",
+              "rightsConfirmed"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "import.image"
+              },
+              "ref": {
+                "$ref": "#/components/schemas/Reference"
+              },
+              "slot": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 4
+              },
+              "action": {
+                "type": "string",
+                "enum": [
+                  "regenerate",
+                  "remove",
+                  "approve"
+                ]
+              },
+              "alt": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 240
+              }
+            },
+            "required": [
+              "op",
+              "ref",
+              "slot",
+              "action"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "import.review"
+              },
+              "ref": {
+                "$ref": "#/components/schemas/Reference"
+              },
+              "id": {
+                "$ref": "#/components/schemas/Key"
+              },
+              "approved": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "op",
+              "ref",
+              "id",
+              "approved"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "import.finish"
+              },
+              "ref": {
+                "$ref": "#/components/schemas/Reference"
+              },
+              "draft": {
+                "$ref": "#/components/schemas/Draft"
+              },
+              "intent": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "publish"
+                ]
+              }
+            },
+            "required": [
+              "op",
+              "ref",
+              "draft",
+              "intent"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "import.cancel"
+              },
+              "ref": {
+                "$ref": "#/components/schemas/Reference"
+              }
+            },
+            "required": [
+              "op",
+              "ref"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "import.retry"
+              },
+              "ref": {
+                "$ref": "#/components/schemas/Reference"
+              },
+              "stage": {
+                "type": "string",
+                "enum": [
+                  "extraction",
+                  "content",
+                  "images",
+                  "reviews"
+                ]
+              }
+            },
+            "required": [
+              "op",
+              "ref",
+              "stage"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "Receipt": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "eventId": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "productId": {
+            "$ref": "#/components/schemas/Key"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "applied",
+              "queued"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "revision",
+          "eventId",
+          "outcome"
+        ],
+        "additionalProperties": false
+      },
+      "Login": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "format": "email",
+            "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "additionalProperties": false
+      },
+      "IssuedSession": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._~-]{20,4096}$"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 86400
+          }
+        },
+        "required": [
+          "token",
+          "expiresIn"
+        ],
+        "additionalProperties": false
+      },
+      "Recovery": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "format": "email",
+            "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "additionalProperties": false
+      },
+      "PrivateSearch": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "maxLength": 150
+          },
+          "status": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "const": ""
+          },
+          "sort": {
+            "type": "string"
+          },
+          "page": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "customerId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "q",
+          "status",
+          "category",
+          "sort",
+          "page",
+          "customerId"
+        ],
+        "additionalProperties": false
+      },
+      "ProductRowPage": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductRow"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "page": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          }
+        },
+        "required": [
+          "rows",
+          "total",
+          "page",
+          "pageSize"
+        ],
+        "additionalProperties": false
+      },
+      "OrderRowPage": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderRow"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "page": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          }
+        },
+        "required": [
+          "rows",
+          "total",
+          "page",
+          "pageSize"
+        ],
+        "additionalProperties": false
+      },
+      "StockPage": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Stock"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "page": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          }
+        },
+        "required": [
+          "rows",
+          "total",
+          "page",
+          "pageSize"
+        ],
+        "additionalProperties": false
+      },
+      "CustomerPage": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Customer"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "page": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          }
+        },
+        "required": [
+          "rows",
+          "total",
+          "page",
+          "pageSize"
+        ],
+        "additionalProperties": false
+      },
+      "ReviewPage": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Review"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "page": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          }
+        },
+        "required": [
+          "rows",
+          "total",
+          "page",
+          "pageSize"
+        ],
+        "additionalProperties": false
+      },
+      "JobRowPage": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JobRow"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "page": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          }
+        },
+        "required": [
+          "rows",
+          "total",
+          "page",
+          "pageSize"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}
