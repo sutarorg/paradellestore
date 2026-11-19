@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { viewerSchema, type Scope, type Viewer } from '../admin/models';
-import { need, secret, hash, tx, limit, audit, type Tx } from './base';
+import { Fault, need, secret, hash, tx, limit, audit, type Tx } from './base';
 export function supabase(privileged = false) {
   const u = secret('NEXT_PUBLIC_SUPABASE_URL');
   const local = ['localhost', '127.0.0.1'].includes(new URL(u).hostname);
