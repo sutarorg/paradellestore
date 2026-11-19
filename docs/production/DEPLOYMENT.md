@@ -17,7 +17,7 @@ Required: `DATABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON
 No seed catalogue; empty `store_settings` only.
 
 ## Cron and limits
-`vercel.json` crons `GET /api/maintenance` every minute with `Authorization: Bearer $CRON_SECRET`. Handler does reconciliation, refund-checks, expiry cleanup under bounded time. Razorpay and fal calls are server-only with timeouts; catalogue reads rate-limited (`catalogue-read` 180/60s, checkout IP throttles, `FAL_DAILY_SUBMISSION_LIMIT`).
+`vercel.json` crons `GET /api/maintenance` **daily at 03:00 UTC** (`0 3 * * *`) with `Authorization: Bearer $CRON_SECRET` — Hobby plan limit (daily only). Handler does reconciliation, refund-checks, expiry cleanup under bounded time. Razorpay and fal calls are server-only with timeouts; catalogue reads rate-limited (`catalogue-read` 180/60s, checkout IP throttles, `FAL_DAILY_SUBMISSION_LIMIT`). Upgrade to Pro to use `* * * * *` every minute; on Hobby you can also trigger `POST /api/maintenance` manually with the CRON_SECRET bearer for immediate reconciliation.
 
 ## Backups and recovery
 Supabase PITR/daily per plan; Storage objects NOT included in DB backups. Application never stores payment secrets in DB. Rotate `APP_HMAC_SECRET`/`CRON_SECRET` via Vercel sensitive settings, redeploy, verify `check:config`. For webhook secret rotation, set `RAZORPAY_WEBHOOK_PREVIOUS_SECRET` for one retry window, then remove. Rollback: revert deployment in Vercel, re-apply prior migration if schema changed (forward-only; test in preview first).
