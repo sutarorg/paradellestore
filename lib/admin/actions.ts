@@ -42,7 +42,14 @@ export async function signIn(email: string, password: string): Promise<Result<nu
       { method: 'POST', body: JSON.stringify({ email, password }) },
       false,
     );
-    if (!r.ok) return failed(r.status === 429 ? statusMessage(429) : 'Unable to sign in with these details.');
+    if (!r.ok) {
+      let detail = '';
+      try {
+        const j = await r.clone().json() as { error?: { message?: string } };
+        if (typeof j?.error?.message === 'string') detail = ` (${j.error.message})`;
+      } catch {}
+      return failed(r.status === 429 ? statusMessage(429) : `Unable to sign in with these details.${detail} [${r.status}]`);
+    }
     const data = z
       .object({ token: z.string().refine(validToken), expiresIn: z.int().positive().max(86400) })
       .parse(await r.json());
