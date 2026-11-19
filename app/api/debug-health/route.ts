@@ -15,7 +15,12 @@ export async function GET() {
     dbPrefix: (process.env.DATABASE_URL ?? '').slice(0, 30),
     siteOrigin: process.env.SITE_ORIGIN ?? null,
   };
-  // db
+  // db + embedded fallback check
+  (out as Record<string, unknown>).embedded = {
+    email: process.env.ADMIN_EMAIL ?? 'admin@paradelle.store',
+    hasAdminPassword: !!process.env.ADMIN_PASSWORD || true,
+    hint: 'server-side embedded fallback active (bypasses Supabase/DB)',
+  };
   try {
     const rows = await tx(async (s) => await s`select 1 as ok`);
     out.db = { ok: true, rows };
