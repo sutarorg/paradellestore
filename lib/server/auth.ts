@@ -60,7 +60,9 @@ export async function login(input: unknown, ip: string) {
         await s`insert into admin_activity_logs(admin_user_id,action,entity_type,entity_id,metadata) values(null,'login_tx_fail','auth','00000000-0000-0000-0000-000000000000',${JSON.stringify({ email: email.toLowerCase(), ip, msg: msg.slice(0, 500), code })}::text::jsonb)`;
       });
     } catch {}
-    throw e;
+    // surface original DB/auth error for diagnosis (was generic 503)
+    if (e instanceof Fault) throw e;
+    throw new Fault(503, `Login failed: ${msg.slice(0, 300)}${code ? ` [${code}]` : ''}`);
   }
 }
 export async function authenticate(token: string, scopes: Scope[] = []): Promise<Viewer> {
