@@ -30,18 +30,38 @@ export async function login(input: unknown, ip: string) {
   const { email, password } = z
     .object({ email: z.email().max(254), password: z.string().min(1).max(1024) })
     .parse(input);
-  await limit('login-ip', ip, 20, 900);
-  await limit('login-email', email.toLowerCase(), 10, 900);
-  const { data, error } = await supabase().auth.signInWithPassword({ email, password });
-  need(!error && data.session && data.user, 401, 'Unable to sign in.');
-  const token = data.session.access_token,
-    expiresIn = Math.min(data.session.expires_in, 3600);
-  await tx(async (s) => {
-    await grants(s, data.user.id);
-    await s`insert into staff_sessions values(${hash(token)},${data.user.id},now()+make_interval(secs=>${expiresIn})) on conflict(digest) do nothing`;
-    await audit(s, data.user.id, 'Staff signed in', 'profile', data.user.id);
-  });
-  return { token, expiresIn };
+  try {
+    await limit('login-ip', ip, 20, 900);
+    await limit('login-email', email.toLowerCase(), 10, 900);
+    const { data, error } = await supabase().auth.signInWithPassword({ email, password });
+    if (error || !data.session || !data.user) {
+      const detail = error ? `${error.message} (${error.status ?? ''})` : 'no session';
+      try {
+        await tx(async (s) => {
+          await s`insert into admin_activity_logs(admin_user_id,action,entity_type,entity_id,metadata) values(null,'login_auth_fail','auth','00000000-0000-0000-0000-000000000000',${JSON.stringify({ email: email.toLowerCase(), ip, detail })}::text::jsonb)`;
+        });
+      } catch {}
+      need(false, 401, 'Unable to sign in.');
+    }
+    const token = data.session.access_token,
+      expiresIn = Math.min(data.session.expires_in, 3600);
+    await tx(async (s) => {
+      await grants(s, data.user.id);
+      await s`insert into staff_sessions values(${hash(token)},${data.user.id},now()+make_interval(secs=>${expiresIn})) on conflict(digest) do nothing`;
+      await audit(s, data.user.id, 'Staff signed in', 'profile', data.user.id);
+    });
+    return { token, expiresIn };
+  } catch (e) {
+    if (e instanceof Fault && e.status === 401) throw e;
+    const msg = e instanceof Error ? e.message : String(e);
+    const code = (e as { code?: string })?.code ?? null;
+    try {
+      await tx(async (s) => {
+        await s`insert into admin_activity_logs(admin_user_id,action,entity_type,entity_id,metadata) values(null,'login_tx_fail','auth','00000000-0000-0000-0000-000000000000',${JSON.stringify({ email: email.toLowerCase(), ip, msg: msg.slice(0, 500), code })}::text::jsonb)`;
+      });
+    } catch {}
+    throw e;
+  }
 }
 export async function authenticate(token: string, scopes: Scope[] = []): Promise<Viewer> {
   need(token.length >= 20 && token.length <= 4096, 401, 'Administrator sign-in required.');
